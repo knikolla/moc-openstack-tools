@@ -1,3 +1,14 @@
+## Installation of dependent packages
+    pip install gspread
+    pip install oauth2client==1.5.2
+
+## Getting the Signed Credentials from Google
+1. Goto [Google Developers Console](https://console.developers.google.com/project) and create a new project or select the existing one.
+2. In "Auth & API", enable it and create "Service account key". [Referral link](http://gspread.readthedocs.org/en/latest/oauth2.html)
+3. Place the "service account key" file in addusers directory and update the name in settings.ini file.
+4. Share the google-spreadsheet with the email-address found within the "service-account-key" file.
+5. Get the spreadsheet id and put it in settings.ini file.
+
 ## Usecase
 These scripts are to create user account and project on openstack. 
 The script can be run from the node which has keystoneclient and novaclient installed.
