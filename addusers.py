@@ -118,17 +118,20 @@ def email_msg(receiver, body, type):
     msg['From'] = fromaddr
     msg['To'] = receiver
 
+    server = smtplib.SMTP('127.0.0.1', 25)
+    server.ehlo()
+    server.starttls()
+    #server.login(fromaddr, password)
+
     if type == "new_user":
         msg['Cc'] = config.get("gmail", "cc_list")
         msg['Subject'] = "MOC Welcome mail"
+        receivers = [receiver, msg['Cc']]
+        server.sendmail(fromaddr, receivers, msg.as_string())
     else:
         msg['Subject'] = "MOC account password"
+        server.sendmail(fromaddr, receiver, msg.as_string())
 
-    server = smtplib.SMTP('smtp.gmail.com', 587)
-    server.ehlo()
-    server.starttls()
-    server.login(fromaddr, password)
-    server.sendmail(fromaddr, receiver, msg.as_string())
 
 
 if __name__ == "__main__":
