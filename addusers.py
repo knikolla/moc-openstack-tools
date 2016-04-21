@@ -53,13 +53,13 @@ class Openstack:
     def create_project(self, name, description):
         tenants = [tenant.name for tenant in self.keystone.tenants.list()]
         if name not in tenants:
-            print "Tenant not present, creating one."
+            print "TENANT: %-30s   \tPRESENT: NO, CREATING IT" % name
             tenant = self.keystone.tenants.create(tenant_name=name,
                                                   description=description,
                                                   enabled=True)
             return tenant.id
         else:
-            print "Tenant already present. Skip creating it again."
+            print "TENANT: %-30s   \tPRESENT: YES" % name
             tenants = [(tenant.name, tenant.id) for tenant in self.keystone.tenants.list()]
             for tenant in tenants:
                 if name == tenant[0]:
@@ -68,7 +68,7 @@ class Openstack:
     def create_user(self, name, username, password, description, email, tenant_id, proj_name):
         users = [user.name for user in self.keystone.users.list()]
         if username not in users:
-            print "User not present, creating it."
+            print "\tUSER: %-30s    PRESENT: NO, CREATING IT" % username
             user = self.keystone.users.create(name=username,
                                               email=email,
                                               password=password,
@@ -77,7 +77,7 @@ class Openstack:
             send_email(name, username, proj_name, password)
 
         else:
-            print "User already present, doing nothing"
+            print "\tUSER: %-30s    PRESENT: YES" % username
 
     def modify_quotas(self, tenant_id, **kwargs):
         """
