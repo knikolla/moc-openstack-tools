@@ -37,4 +37,17 @@ Here is a sample copy of setting.ini file:-
     email_path = ./user_emails/
     password_path = ./password_emails/
 
+## Mail Server Config
+
+The mail server needs to have TLS enabled. If using postfix, add the 
+following lines to /etc/postfix/main.cf:
+
+smtpd_tls_cert_file = /path/to/cert/file
+smtpd_tls_key_file = /path/to/key/file
+smtpd_tls_security_level = may
+
+If no certificate exists, one can be generated:
+     openssl req -new -x509 -nodes -out /etc/postfix/postfix.pem -keyout /etc/postfix/postfix.pem -days 3650
+
+
 
