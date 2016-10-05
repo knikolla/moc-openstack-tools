@@ -110,9 +110,19 @@ def send_email(fullname, username, proj_name, password):
     email_msg(username, msg, "password")
 
 
-def email_msg(receiver, body, type):
-    fromaddr = config.get("gmail", "email")
-    password = config.get("gmail", "password")
+def email_msg(receiver, body, email_type):
+    
+    # This if statement is a temporary hack to divert the password emails
+    # so passwords can be delivered via phone.  Make sure Piyanai's email
+    # is added to password_to in settings.ini
+    if email_type == "new_user":
+        #These two lines should remain when hack is removed
+        fromaddr = config.get("gmail", "email")
+        password = config.get("gmail", "password")    
+    else:
+        fromaddr = config.get("gmail", "password_to")
+        receiver = fromaddr
+
 
     msg = MIMEText(body)
     msg['From'] = fromaddr
@@ -123,7 +133,7 @@ def email_msg(receiver, body, type):
     server.starttls()
     #server.login(fromaddr, password)
 
-    if type == "new_user":
+    if email_type == "new_user":   
         msg['Cc'] = config.get("gmail", "cc_list")
         msg['Subject'] = "MOC Welcome mail"
         receivers = [receiver, msg['Cc']]
