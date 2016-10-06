@@ -4,6 +4,7 @@ import os
 import json
 import string
 import random
+import re
 import ConfigParser
 from keystoneclient.v2_0 import client
 from novaclient import client as novaclient
@@ -31,8 +32,15 @@ email_template = config.get('templates', 'email_template')
 password_template = config.get('templates', 'password_template')
 
 email_path = config.get('output', 'email_path')
-password_path = config.get('output', 'password_path')
 
+class InvalidEmailError(Exception):
+    """User's email address does not pass basic format validation"""
+
+class BadEmailRecipient(InvalidEmailError):
+    """If sending failed to one or more recipients, but not all of them."""
+    def __init__(self, rdict, subject):
+        self.rejected = rdict;
+        self.message = "Message {0} could not be sent to one or more recipients.".format(subject)
 
 def random_password(size):
     chars = string.ascii_letters + string.digits + string.punctuation[2:6]
@@ -51,6 +59,17 @@ class Openstack:
                                       password,
                                       tname,
                                       auth_url)
+    def validate_email(self, uname):
+        """Check that the email address provided matches a few simple rules
+
+        The email address should have no whitespace, exactly 1 '@' symbol, and
+        at least one '.' following the @ symbol. 
+        """
+        pattern = re.compile('[^@\s]+@[^@\s]+\.[^@\s]+')
+        if pattern.match(uname):
+            return
+        else:
+            raise InvalidEmailError('Not a valid email address: {}'.format(uname))
 
         """
         region_name is passed to neutronclient to avoid this warning: 
@@ -93,12 +112,21 @@ class Openstack:
         users = [user.name for user in self.keystone.users.list()]
         if username not in users:
             print "\tUSER: %-30s    PRESENT: NO, CREATING IT" % username
+            self.validate_email(username)    
             user = self.keystone.users.create(name=username,
                                               email=email,
                                               password=password,
                                               tenant_id=tenant_id)
 
-            send_email(name, username, proj_name, password)
+            try:
+                send_email(name, username, 'new_user', proj_name=proj_name)
+            except:
+                # save text of the password email too if welcome email fails
+                msg = personalize_msg(password_template, name, username, proj_name, password)
+                email_to_file(username, msg, 'password')
+                raise
+
+            send_email(name, username, 'password', password=password)
 
         else:
             print "\tUSER: %-30s    PRESENT: YES" % username
@@ -115,6 +143,7 @@ class Openstack:
         If networks are managed by neutron, the values reported by nova are 
         not accurate, and updates made via novaclient have no effect
         """
+
         # Quotas managed by neutronclient
         neutron = [ 'subnet', 'network', 'floatingip', 'subnetpool', 
                 'security_group_rule', 'security_group', 'router', 
@@ -162,25 +191,46 @@ class Openstack:
         all_quotas.update(new_cinder._info)
         print "Quotas: {0}\n".format(json.dumps(all_quotas))
 
-def send_email(fullname, username, proj_name, password):
-    with open(email_template, "r") as f:
+def personalize_msg(template, fullname, username, proj_name, password):
+    """Fill in email template with individual user info"""
+    with open(template, "r") as f:
         msg = f.read()
     msg = string.replace(msg, "<USER>", fullname)
     msg = string.replace(msg, "<USERNAME>", username)
     msg = string.replace(msg, "<PROJECTNAME>", proj_name)
-
-    # send welcome email
-    email_msg(username, msg, "new_user")
-
-    with open(password_template, "r") as f:
-        msg = f.read()
-    msg = string.replace(msg, "<USER>", fullname)
-    msg = string.replace(msg, "<USERNAME>", username)
     msg = string.replace(msg, "<PASSWORD>", password)
+    
+    return msg
 
-    # send password email
-    email_msg(username, msg, "password")
+def email_to_file(username, message, mtype):          
+    out_file = "{0}_{1}.txt".format(username, mtype)
+    filepath = os.path.join(email_path, out_file)
+    with open(filepath, 'w') as f:
+        f.write(message)
+    f.close()
+    return filepath
 
+def send_email(fullname, username, email_type, proj_name='None', password='None'):
+
+    if email_type == "new_user":
+        template = email_template
+    else:
+        template = password_template
+    
+    msg = personalize_msg(template, fullname, username, proj_name, password)
+
+    try:
+        email_msg(username, msg, email_type)
+    
+    except BadEmailRecipient as e:
+        # warn user that not everyone got the emails, and save the email text
+        # but continue with the script
+        print e.message
+        print "sendmail reports:\n {0}".format(e.rejected)
+        email_to_file(username, msg, email_type)
+    except:
+        email_to_file(username, msg, email_type)
+        raise
 
 def email_msg(receiver, body, email_type):
     
@@ -202,17 +252,29 @@ def email_msg(receiver, body, email_type):
 
     server = smtplib.SMTP('127.0.0.1', 25)
     server.ehlo()
-    server.starttls()
-    #server.login(fromaddr, password)
+    try: 
+        server.starttls()
+    except smtplib.SMTPException as e:
+        if e.message == "STARTTLS extension not supported by server.":
+            print ("\n{0}: Sending message failed.\n".format(__file__) +
+            "See README for how to enable STARTTLS")  
+        raise e
 
     if email_type == "new_user":   
         msg['Cc'] = config.get("gmail", "cc_list")
         msg['Subject'] = "MOC Welcome mail"
         receivers = [receiver, msg['Cc']]
-        server.sendmail(fromaddr, receivers, msg.as_string())
     else:
+        receivers = receiver
         msg['Subject'] = "MOC account password"
-        server.sendmail(fromaddr, receiver, msg.as_string())
+    
+    rejected = server.sendmail(fromaddr, receivers, msg.as_string())
+    # server.sendmail only raises SMTPRecipientsRefused if *all* recipients 
+    # fail and the email cannot be sent.
+    
+    # handle the case where only some recipients fail:
+    if len(rejected):
+       raise BadEmailRecipient(rejected, msg['Subject'])
 
 if __name__ == "__main__":
     openstack = Openstack(admin_user, admin_pwd, admin_tenant, auth_url, nova_version)
