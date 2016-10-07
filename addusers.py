@@ -92,21 +92,23 @@ class Openstack:
                                           auth_url)
 
     def create_project(self, name, description, quotas):
-        tenants = [tenant.name for tenant in self.keystone.tenants.list()] 
-        if name not in tenants:
+        tenants = [tenant.name.lower() for tenant in self.keystone.tenants.list()]
+        name_low = name.lower()
+        if name_low not in tenants:
             print "TENANT: %-30s   \tPRESENT: NO, CREATING IT" % name
             tenant = self.keystone.tenants.create(tenant_name=name,
                                                   description=description,
                                                   enabled=True)
+
             # we only want to set quotas for newly created projects
             self.modify_quotas(tenant.id, name, **quotas)
-            return tenant.id
+            return tenant.name, tenant.id
         else:
             print "TENANT: %-30s   \tPRESENT: YES" % name
             tenants = [(tenant.name, tenant.id) for tenant in self.keystone.tenants.list()]
             for tenant in tenants:
-                if name == tenant[0]:
-                    return tenant[1]
+                if name_low == tenant[0]:
+                    return tenant 
 
     def create_user(self, name, username, password, description, email, tenant_id, proj_name):
         users = [user.name for user in self.keystone.users.list()]
@@ -285,7 +287,7 @@ if __name__ == "__main__":
     quotas = dict(config.items('quotas'))
     
     for project in content:
-        proj_id = openstack.create_project(project, "", quotas)
+        proj_name, proj_id = openstack.create_project(project, "", quotas)
 
         # email id is used as username as well.....
         for user in content[project]:
@@ -294,8 +296,8 @@ if __name__ == "__main__":
             username = user["email"]
             email = user["email"]
             user_descr = name
-            openstack.create_user(name, username, password, user_descr, email, proj_id, project)        
-    
+            openstack.create_user(name, username, password, user_descr, email, proj_id, proj_name)
+
     '''
     #TODO: move this code to a 'manual input' function triggered by an option flag
     proj_name = raw_input("Enter the new project name: ")
