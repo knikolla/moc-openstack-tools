@@ -59,17 +59,6 @@ class Openstack:
                                       password,
                                       tname,
                                       auth_url)
-    def validate_email(self, uname):
-        """Check that the email address provided matches a few simple rules
-
-        The email address should have no whitespace, exactly 1 '@' symbol, and
-        at least one '.' following the @ symbol. 
-        """
-        pattern = re.compile('[^@\s]+@[^@\s]+\.[^@\s]+')
-        if pattern.match(uname):
-            return
-        else:
-            raise InvalidEmailError('Not a valid email address: {}'.format(uname))
 
         """
         region_name is passed to neutronclient to avoid this warning: 
@@ -90,6 +79,18 @@ class Openstack:
                                           password,
                                           tname,
                                           auth_url)
+    
+    def validate_email(self, uname):
+        """Check that the email address provided matches a few simple rules
+
+        The email address should have no whitespace, exactly 1 '@' symbol, and
+        at least one '.' following the @ symbol. 
+        """
+        pattern = re.compile('[^@\s]+@[^@\s]+\.[^@\s]+')
+        if pattern.match(uname):
+            return
+        else:
+            raise InvalidEmailError('Not a valid email address: {}'.format(uname))
 
     def create_project(self, name, description, quotas):
         tenants = [tenant.name.lower() for tenant in self.keystone.tenants.list()]
