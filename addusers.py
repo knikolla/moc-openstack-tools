@@ -240,14 +240,13 @@ def email_msg(receiver, body, email_type):
     # This if statement is a temporary hack to divert the password emails
     # so passwords can be delivered via phone.  Make sure Piyanai's email
     # is added to password_to in settings.ini
-    if email_type == "new_user":
+    if email_type == "password":
+        fromaddr = config.get("gmail", "password_to")
+        receiver = fromaddr
+    else:
         #These two lines should remain when hack is removed
         fromaddr = config.get("gmail", "email")
         password = config.get("gmail", "password")    
-    else:
-        fromaddr = config.get("gmail", "password_to")
-        receiver = fromaddr
-
 
     msg = MIMEText(body)
     msg['From'] = fromaddr
@@ -267,9 +266,16 @@ def email_msg(receiver, body, email_type):
         msg['Cc'] = config.get("gmail", "cc_list")
         msg['Subject'] = "MOC Welcome mail"
         receivers = [receiver, msg['Cc']]
-    else:
+    elif email_type == "password":
         receivers = receiver
         msg['Subject'] = "MOC account password"
+    elif email_type == "listserv":
+        receivers = receiver
+        # the listserv results email contains the listserv password in plaintext
+        # so send it only to the person who ran the script, not the whole CC list
+        fromaddr = config.get("mailing_list", "my_email")
+    else: 
+        raise Exception("No such email type: {0}".format(email_type))
     
     rejected = server.sendmail(fromaddr, receivers, msg.as_string())
     # server.sendmail only raises SMTPRecipientsRefused if *all* recipients 
@@ -279,6 +285,19 @@ def email_msg(receiver, body, email_type):
     if len(rejected):
        raise BadEmailRecipient(rejected, msg['Subject'])
 
+def mailing_list(emails):
+    """Subscribe all new users to the mailing list"""
+    list_name = config.get('mailing_list', 'list_name')
+    list_pass = config.get('mailing_list', 'list_pass')
+    majordomo = config.get('mailing_list', 'majordomo')
+    
+    msg=""
+
+    for address in emails:
+        msg += "approve {0} subscribe {1} {2}\n".format(list_pass, list_name, address)
+        
+    email_msg(majordomo, msg, 'listserv')
+
 if __name__ == "__main__":
     openstack = Openstack(admin_user, admin_pwd, admin_tenant, auth_url, nova_version)
 
@@ -286,7 +305,8 @@ if __name__ == "__main__":
     worksheet_key = config.get("excelsheet", "worksheet_key")
     content = parse_spreadsheet.get_details(auth_file, worksheet_key)
     quotas = dict(config.items('quotas'))
-    
+    emails = []
+
     for project in content:
         proj_name, proj_id = openstack.create_project(project, "", quotas)
 
@@ -298,6 +318,9 @@ if __name__ == "__main__":
             email = user["email"]
             user_descr = name
             openstack.create_user(name, username, password, user_descr, email, proj_id, proj_name)
+            emails.append(email)
+
+    mailing_list(emails)
 
     '''
     #TODO: move this code to a 'manual input' function triggered by an option flag
