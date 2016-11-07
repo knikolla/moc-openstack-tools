@@ -253,7 +253,6 @@ def email_msg(receiver, body, email_type):
         password = config.get("gmail", "password")    
 
     msg = MIMEText(body)
-    msg['From'] = fromaddr
     msg['To'] = receiver
 
     server = smtplib.SMTP('127.0.0.1', 25)
@@ -270,14 +269,17 @@ def email_msg(receiver, body, email_type):
         msg['Cc'] = config.get("gmail", "cc_list")
         msg['Subject'] = "MOC Welcome mail"
         receivers = [receiver, msg['Cc']]
+        msg['From'] = fromaddr
     elif email_type == "password":
         receivers = receiver
         msg['Subject'] = "MOC account password"
+        msg['From'] = fromaddr
     elif email_type == "listserv":
         receivers = receiver
         # the listserv results email contains the listserv password in plaintext
         # so send it only to the person who ran the script, not the whole CC list
         fromaddr = config.get("mailing_list", "my_email")
+        msg['From'] = fromaddr
     else: 
         raise Exception("No such email type: {0}".format(email_type))
     
