@@ -1,4 +1,4 @@
-__author__ = 'rahuls@ccs.neu.edu'
+__author__ = 'rahuls@ccs.neu.edu, kamfonik@bu.edu'
 
 import os
 import json
@@ -14,7 +14,7 @@ from cinderclient.v2 import client as cinderclient
 import smtplib
 from email.mime.text import MIMEText
 
-import parse_spreadsheet
+import spreadsheet
 
 CONFIG_FILE = "settings.ini"
 
@@ -35,6 +35,9 @@ email_path = config.get('output', 'email_path')
 
 class InvalidEmailError(Exception):
     """User's email address does not pass basic format validation"""
+
+class UserExistsError(Exception):
+    """User already exists and cannot be created"""
 
 class BadEmailRecipient(InvalidEmailError):
     """If sending failed to one or more recipients, but not all of them."""
@@ -115,7 +118,7 @@ class Openstack:
         users = [user.name for user in self.keystone.users.list()]
         if username not in users:
             print "\tUSER: %-30s    PRESENT: NO, CREATING IT" % username
-            self.validate_email(username)    
+            self.validate_email(username) 
             user = self.keystone.users.create(name=username,
                                               email=email,
                                               password=password,
@@ -124,7 +127,7 @@ class Openstack:
             try:
                 send_email(name, username, 'new_user', proj_name=proj_name)
             except:
-                # save text of the password email too if welcome email fails
+                #save text of the password email too if welcome email fails
                 msg = personalize_msg(password_template, name, username, proj_name, password)
                 email_to_file(username, msg, 'password')
                 raise
@@ -133,6 +136,7 @@ class Openstack:
 
         else:
             print "\tUSER: %-30s    PRESENT: YES" % username
+            raise UserExistsError("User exists: {0}.".format(username))
 
     def modify_quotas(self, tenant_id, tenant_name, **kwargs):
         """
@@ -298,15 +302,47 @@ def mailing_list(emails):
         
     email_msg(majordomo, msg, 'listserv')
 
+def parse_rows(rows):
+    """Parse new user data from the spreadsheet into a dictionary
+    
+    Expects 'rows' to include all rows, with row 0 being the header row
+    Returns a dictionary of projects/users and a list of rows that were
+    incomplete but not blank.
+    """
+    projects = {}    
+    bad_rows = []
+    for idx, entry in enumerate(rows):
+        #ignore row 0 (the header row) and blank rows
+        if (idx == 0) or (entry == []):
+            continue
+        elif (len(entry) < 10) or ('' in entry):
+            bad_rows.append(idx)
+        else:
+            project = entry[1]
+            name = entry[2] + " " + entry[3]
+            email = entry[4].replace(u'\xa0', ' ').strip()
+            req = {"name": name, "email": email, "row": idx }
+
+            if project in projects:
+                projects[project].append(req)
+            else:
+                projects[project] = [req]
+    return projects, bad_rows
+
 if __name__ == "__main__":
     openstack = Openstack(admin_user, admin_pwd, admin_tenant, auth_url, nova_version)
-
     auth_file = config.get("excelsheet", "auth_file")
     worksheet_key = config.get("excelsheet", "worksheet_key")
-    content = parse_spreadsheet.get_details(auth_file, worksheet_key)
     quotas = dict(config.items('quotas'))
+    
+    sheet = spreadsheet.Spreadsheet(auth_file, worksheet_key)
+    rows = sheet.get_all_rows("Form Responses 1")
+    content, bad_rows = parse_rows(rows)
+    
+    failed_create = []
+    copy_index = []
     emails = []
-
+    
     for project in content:
         proj_name, proj_id = openstack.create_project(project, "", quotas)
 
@@ -317,11 +353,39 @@ if __name__ == "__main__":
             username = user["email"]
             email = user["email"]
             user_descr = name
-            openstack.create_user(name, username, password, user_descr, email, proj_id, proj_name)
-            emails.append(email)
+            try: 
+                openstack.create_user(name, username, password, 
+                        user_descr, email, proj_id, proj_name) 
+                copy_index.append(user['row'])
+                emails.append(email)                
+            except (UserExistsError, InvalidEmailError) as e:
+                user['error'] = e.message
+                failed_create.append(user)
 
     mailing_list(emails)
-
+    
+    # Copy and delete only the successful rows
+    if copy_index:
+        copy_rows = [r for r in rows if rows.index(r) in copy_index] 
+        sheet.append_rows(copy_rows, target="Current Users")
+        result = sheet.delete_rows(copy_index, 'Form Responses 1')
+    else:
+        print "WARNING: No spreadsheet rows were copied."
+    
+    # In the web GUI, row 0 is numbered 1
+    GUI_rows = [(x+1) for x in bad_rows]
+    print ("WARNING: {count} rows ignored due to missing information: " +
+          "{rowlist}\n").format(count=len(bad_rows), rowlist=GUI_rows)
+ 
+    if failed_create:
+        ERROR_FORMAT="\t{name:>25}\t{error}"
+        print "The following users were not created due to errors:"
+        print ERROR_FORMAT.format(name="NAME", error="ERROR")
+        print ERROR_FORMAT.format(name="-----", error="-----")
+        for user in failed_create:
+            print ERROR_FORMAT.format(**user)
+        
+    
     '''
     #TODO: move this code to a 'manual input' function triggered by an option flag
     proj_name = raw_input("Enter the new project name: ")
