@@ -11,6 +11,9 @@ from novaclient import client as novaclient
 from neutronclient.v2_0 import client as neutronclient
 from cinderclient.v2 import client as cinderclient
 
+#setpass
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
 import smtplib
 from email.mime.text import MIMEText
 
@@ -28,6 +31,8 @@ auth_url = config.get('auth', 'auth_url')
 region_name = config.get('auth', 'region_name') # not needed in Mitaka
 nova_version = config.get('nova', 'version')
 
+keystone_v3_url = config.get('setpass', 'keystone_v3_url')
+setpass_url = config.get('setpass', 'setpass_url')
 email_template = config.get('templates', 'email_template')
 password_template = config.get('templates', 'password_template')
 
@@ -49,6 +54,30 @@ def random_password(size):
     chars = string.ascii_letters + string.digits + string.punctuation[2:6]
     return ''.join(random.choice(chars) for _ in range(size))
 
+class Setpass:
+    def __init__(self, keystone_v3_url, keystone_admin, keystone_password, setpass_url):
+        self.url = setpass_url
+        auth = v3.Password(auth_url=keystone_v3_url,
+                           username=keystone_admin,
+                           user_domain_id = 'default',
+                           password=keystone_password)
+        self.session = session.Session(auth=auth)
+    
+    def get_token(self, userid, password, pin):
+        """ Add the user ID and random password to the setpass database.  
+        
+        Returns a token allowing the user to set their password.
+        """
+        body = { 'password': password, 'pin': pin }
+        request_url = '{base}/token/{userid}'.format(base=self.url, userid=userid)
+        response = self.session.put(request_url, json=body)
+        token = response.text
+        return token
+
+    def get_url(self, token):
+        """ Generate URL for the user to set their password """
+        url = "{base}?token={token}".format(base=self.url, token=token)
+        return url
 
 class Openstack:
 
@@ -82,6 +111,8 @@ class Openstack:
                                           password,
                                           tname,
                                           auth_url)
+   
+        self.setpass = Setpass(keystone_v3_url, uname, password, setpass_url) 
     
     def validate_email(self, uname):
         """Check that the email address provided matches a few simple rules
@@ -114,7 +145,7 @@ class Openstack:
                 if name_low == tenant[0]:
                     return tenant 
 
-    def create_user(self, name, username, password, description, email, tenant_id, proj_name):
+    def create_user(self, name, username, password, description, email, tenant_id, proj_name, pin):
         users = [user.name for user in self.keystone.users.list()]
         if username not in users:
             print "\tUSER: %-30s    PRESENT: NO, CREATING IT" % username
@@ -123,16 +154,19 @@ class Openstack:
                                               email=email,
                                               password=password,
                                               tenant_id=tenant_id)
+            
+            setpass_token = self.setpass.get_token(user.id, password, pin)
+            password_url = self.setpass.get_url(setpass_token)
 
             try:
                 send_email(name, username, 'new_user', proj_name=proj_name)
             except:
                 #save text of the password email too if welcome email fails
-                msg = personalize_msg(password_template, name, username, proj_name, password)
+                msg = personalize_msg(password_template, name, username, proj_name, password, setpass_token_url=password_url)
                 email_to_file(username, msg, 'password')
                 raise
 
-            send_email(name, username, 'password', password=password)
+            send_email(name, username, 'password', password=password, setpass_token_url=password_url)
 
         else:
             print "\tUSER: %-30s    PRESENT: YES" % username
@@ -198,14 +232,14 @@ class Openstack:
         all_quotas.update(new_cinder._info)
         print "Quotas: {0}\n".format(json.dumps(all_quotas))
 
-def personalize_msg(template, fullname, username, proj_name, password):
+def personalize_msg(template, fullname, username, proj_name, password, setpass_token_url):
     """Fill in email template with individual user info"""
     with open(template, "r") as f:
         msg = f.read()
     msg = string.replace(msg, "<USER>", fullname)
     msg = string.replace(msg, "<USERNAME>", username)
     msg = string.replace(msg, "<PROJECTNAME>", proj_name)
-    msg = string.replace(msg, "<PASSWORD>", password)
+    msg = string.replace(msg, "<SETPASS_TOKEN_URL>", setpass_token_url)
     
     return msg
 
@@ -217,14 +251,14 @@ def email_to_file(username, message, mtype):
     f.close()
     return filepath
 
-def send_email(fullname, username, email_type, proj_name='None', password='None'):
+def send_email(fullname, username, email_type, proj_name='None', password='None', setpass_token_url='None'):
 
     if email_type == "new_user":
         template = email_template
     else:
         template = password_template
     
-    msg = personalize_msg(template, fullname, username, proj_name, password)
+    msg = personalize_msg(template, fullname, username, proj_name, password, setpass_token_url)
 
     try:
         email_msg(username, msg, email_type)
@@ -241,16 +275,8 @@ def send_email(fullname, username, email_type, proj_name='None', password='None'
 
 def email_msg(receiver, body, email_type):
     
-    # This if statement is a temporary hack to divert the password emails
-    # so passwords can be delivered via phone.  Make sure Piyanai's email
-    # is added to password_to in settings.ini
-    if email_type == "password":
-        fromaddr = config.get("gmail", "password_to")
-        receiver = fromaddr
-    else:
-        #These two lines should remain when hack is removed
-        fromaddr = config.get("gmail", "email")
-        password = config.get("gmail", "password")    
+    fromaddr = config.get("gmail", "email")
+    password = config.get("gmail", "password")    
 
     msg = MIMEText(body)
     msg['To'] = receiver
@@ -323,7 +349,8 @@ def parse_rows(rows):
             project = entry[1]
             name = entry[2] + " " + entry[3]
             email = entry[4].replace(u'\xa0', ' ').strip()
-            req = {"name": name, "email": email, "row": idx }
+            pin = entry[10]
+            req = {"name": name, "email": email, "pin": pin, "row": idx }
 
             if project in projects:
                 projects[project].append(req)
@@ -354,10 +381,11 @@ if __name__ == "__main__":
             password = random_password(16)
             username = user["email"]
             email = user["email"]
+            pin = user["pin"]
             user_descr = name
             try: 
                 openstack.create_user(name, username, password, 
-                        user_descr, email, proj_id, proj_name) 
+                        user_descr, email, proj_id, proj_name, pin) 
                 copy_index.append(user['row'])
                 emails.append(email)                
             except (UserExistsError, InvalidEmailError) as e:

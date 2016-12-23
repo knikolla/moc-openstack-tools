@@ -3,7 +3,7 @@ Hi <USER>,
 A user account and project have been created for you on MOC Production (Kaizen).  You can log in at:
 https://controller-0.kaizen.massopencloud.org
 
-Your username is "<USERNAME>", and your project is "<PROJECTNAME>".  A temporary password will follow separately.  Your temporary password will expire after 24 hours, so please log in and change it right away.
+Your username is "<USERNAME>", and your project is "<PROJECTNAME>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly.
 
 Some information on getting started with OpenStack can be found here:
 https://github.com/CCI-MOC/moc-public/wiki/Getting-started
