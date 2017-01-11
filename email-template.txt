@@ -5,40 +5,20 @@ https://controller-0.kaizen.massopencloud.org
 
 Your username is "<USERNAME>", and your project is "<PROJECTNAME>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly.
 
-Some information on getting started with OpenStack can be found here:
+Make sure to review the following page outlining our terms, expectations, and default account settings.  Please pay particular attention to the security expectations.  Note that any VM that appears to be compromised will be shut down without warning. 
+https://info.massopencloud.org/blog/wiki/moc-kaizen-terms-best-practices/
+
+We also suggest you take the following steps to prevent lost data / wasted work:
+
+1. The cloud images provided by MOC do not have a default password. Set one in your instances, so that you can log into into the console from the web interface for troubleshooting.
+
+2. Keep a separate backup of any critical data in your OpenStack instances.  Our Ceph Storage backend includes multiple copies of cluster data, but we don't currently maintain a secondary disaster-recovery backup.  
+
+More information on getting started with OpenStack can be found here:
 https://github.com/CCI-MOC/moc-public/wiki/Getting-started
 
-Some important things to note:
-
-1.   We have listed our default quotas/limitations for the projects below this email.  If any of these will cause problems for your work, let us know what your needs are and we will try to accommodate if possible.
-
-2.  For security, our base OS images do not have a default login password.  We strongly suggest you create one immediately after creating a VM in case you need to access the console via the Openstack web dashboard.  Please choose a secure password.
-
-3.  VM images are stored in Ceph, which is a reliable, replicated storage solution.  However, we do not currently maintain any backups outside of our Ceph cluster.  We recommend that you make separate backups of any critical data in your VMS.
-
-If you encounter any issues with your account or project, please send an email to:
+If you have any questions, or if you encounter any issues with your account or project, please send an email to:
 moc-kaizen-l@bu.edu
 
-Thanks.
-
-LIMITATIONS:
-non-admin access only
-only CentOS and Ubuntu images can be uploaded
-
-PROJECT QUOTAS:
-Metadata Items:   128
-VCPUs: 20
-Instances: 10
-Injected Files:   5
-Injected File Content (Bytes):10240
-Volumes: 10
-Volume Snapshots:   10
-Total Size of Volumes and Snapshots (GB):1000
-RAM (MB): 51200
-Security Groups:   -1
-Security Group Rules: -1
-Floating IPs:  2
-Networks: 5
-Ports: 10
-Routers: 10
-Subnets: 10
+Thanks,
+The MOC Team
