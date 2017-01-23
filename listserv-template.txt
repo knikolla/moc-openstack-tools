@@ -1,0 +1,2 @@
+approve <LIST_PASS> subscribe <LIST_NAME> <EMAIL>
+

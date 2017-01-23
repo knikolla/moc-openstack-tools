@@ -12,9 +12,8 @@ from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
-#email
-import smtplib
-from email.mime.text import MIMEText
+#local import
+from message import TemplateMessage
 
 CONFIG_FILE = "settings.ini"
 
@@ -55,39 +54,6 @@ class Setpass:
         url = "{base}?token={token}".format(base=self.url, token=token)
         return url
 
-def send_email(fullname, receiver, setpass_token_url):
-    """Sends the user an email with their password reset link"""
-    template = config.get('templates', 'password_template')
-    fromaddr = config.get('gmail', 'email')
-
-    msg = personalize_msg(template, fullname, setpass_token_url)
-
-    msg = MIMEText(msg)
-    msg['To'] = receiver
-    msg['From'] = fromaddr 
-    msg['Subject'] = "MOC account password"
-
-    server = smtplib.SMTP('127.0.0.1', 25)
-    server.ehlo()
-    try: 
-        server.starttls()
-    except smtplib.SMTPException as e:
-        if e.message == "STARTTLS extension not supported by server.":
-            print ("\n{0}: Sending message failed.\n".format(__file__) +
-            "See README for how to enable STARTTLS")  
-        raise e
-
-    server.sendmail(fromaddr, receiver, msg.as_string())
-
-
-def personalize_msg(template, fullname, setpass_token_url):
-    """Fill in email template with individual user info"""
-    with open(template, "r") as f:
-        msg = f.read()
-    msg = string.replace(msg, "<USER>", fullname)
-    msg = string.replace(msg, "<SETPASS_TOKEN_URL>", setpass_token_url)
-    
-    return msg
 
 def validate_pin(pin):
     """Check that PIN is 4 digits"""
@@ -122,8 +88,12 @@ if __name__ == "__main__":
    
     url = setpass.get_url(token)
 
-    send_email(args.username, args.username, url)
-
-    
+    email_config = dict(config.items('password_email'))
+    email = TemplateMessage(email=args.username, fullname=args.username, setpass_token_url=url, **email_config)
+    try:
+        email.send()
+    except:
+        email.dump_to_file(config)
+        raise
 
    

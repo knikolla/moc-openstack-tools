@@ -1,6 +1,5 @@
 __author__ = 'rahuls@ccs.neu.edu, kamfonik@bu.edu'
 
-import os
 import json
 import string
 import random
@@ -14,9 +13,9 @@ from cinderclient.v2 import client as cinderclient
 #setpass
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
-import smtplib
-from email.mime.text import MIMEText
 
+#local
+import message
 import spreadsheet
 
 CONFIG_FILE = "settings.ini"
@@ -33,22 +32,12 @@ nova_version = config.get('nova', 'version')
 
 keystone_v3_url = config.get('setpass', 'keystone_v3_url')
 setpass_url = config.get('setpass', 'setpass_url')
-email_template = config.get('templates', 'email_template')
-password_template = config.get('templates', 'password_template')
-
-email_path = config.get('output', 'email_path')
 
 class InvalidEmailError(Exception):
     """User's email address does not pass basic format validation"""
 
 class UserExistsError(Exception):
     """User already exists and cannot be created"""
-
-class BadEmailRecipient(InvalidEmailError):
-    """If sending failed to one or more recipients, but not all of them."""
-    def __init__(self, rdict, subject):
-        self.rejected = rdict;
-        self.message = "Message {0} could not be sent to one or more recipients.".format(subject)
 
 def random_password(size):
     chars = string.ascii_letters + string.digits + string.punctuation[2:6]
@@ -114,18 +103,6 @@ class Openstack:
    
         self.setpass = Setpass(keystone_v3_url, uname, password, setpass_url) 
     
-    def validate_email(self, uname):
-        """Check that the email address provided matches a few simple rules
-
-        The email address should have no whitespace, exactly 1 '@' symbol, and
-        at least one '.' following the @ symbol. 
-        """
-        pattern = re.compile('[^@\s]+@[^@\s]+\.[^@\s]+')
-        if pattern.match(uname):
-            return
-        else:
-            raise InvalidEmailError('Not a valid email address: {}'.format(uname))
-
     def create_project(self, name, description, quotas):
         tenants = [tenant.name.lower() for tenant in self.keystone.tenants.list()]
         name_low = name.lower()
@@ -145,11 +122,10 @@ class Openstack:
                 if name_low == tenant[0]:
                     return tenant 
 
-    def create_user(self, name, username, password, description, email, tenant_id, proj_name, pin):
+    def create_user(self, fullname, username, password, description, email, tenant_id, proj_name, pin):
         users = [user.name for user in self.keystone.users.list()]
         if username not in users:
             print "\tUSER: %-30s    PRESENT: NO, CREATING IT" % username
-            self.validate_email(username) 
             user = self.keystone.users.create(name=username,
                                               email=email,
                                               password=password,
@@ -158,16 +134,20 @@ class Openstack:
             setpass_token = self.setpass.get_token(user.id, password, pin)
             password_url = self.setpass.get_url(setpass_token)
 
+            usr_cfg = dict(config.items('welcome_email'))
+            pwd_cfg = dict(config.items('password_email'))
+
+            welcome_email = message.TemplateMessage(email=email, username=username, fullname=fullname, project=project, **usr_cfg)
+            password_email = message.TemplateMessage(email=email, fullname=fullname, setpass_token_url=password_url, **pwd_cfg)
             try:
-                send_email(name, username, 'new_user', proj_name=proj_name)
+                welcome_email.send()
+                password_email.send()
             except:
-                #save text of the password email too if welcome email fails
-                msg = personalize_msg(password_template, name, username, proj_name, password, setpass_token_url=password_url)
-                email_to_file(username, msg, 'password')
+                # Save both emails if either throws an error, just in case
+                path = config.get('output', 'email_path')
+                welcome_email.dump_to_file(target_path=path, label="welcome")
+                password_email.dump_to_file(target_path=path, label="password")
                 raise
-
-            send_email(name, username, 'password', password=password, setpass_token_url=password_url)
-
         else:
             print "\tUSER: %-30s    PRESENT: YES" % username
             raise UserExistsError("User exists: {0}.".format(username))
@@ -232,103 +212,17 @@ class Openstack:
         all_quotas.update(new_cinder._info)
         print "Quotas: {0}\n".format(json.dumps(all_quotas))
 
-def personalize_msg(template, fullname, username, proj_name, password, setpass_token_url):
-    """Fill in email template with individual user info"""
-    with open(template, "r") as f:
-        msg = f.read()
-    msg = string.replace(msg, "<USER>", fullname)
-    msg = string.replace(msg, "<USERNAME>", username)
-    msg = string.replace(msg, "<PROJECTNAME>", proj_name)
-    msg = string.replace(msg, "<SETPASS_TOKEN_URL>", setpass_token_url)
-    
-    return msg
+def validate_email(uname):
+    """Check that the email address provided matches a few simple rules
 
-def email_to_file(username, message, mtype):          
-    out_file = "{0}_{1}.txt".format(username, mtype)
-    filepath = os.path.join(email_path, out_file)
-    with open(filepath, 'w') as f:
-        f.write(message)
-    f.close()
-    return filepath
-
-def send_email(fullname, username, email_type, proj_name='None', password='None', setpass_token_url='None'):
-
-    if email_type == "new_user":
-        template = email_template
+    The email address should have no whitespace, exactly 1 '@' symbol, and
+    at least one '.' following the @ symbol. 
+    """
+    pattern = re.compile('[^@\s]+@[^@\s]+\.[^@\s]+')
+    if pattern.match(uname):
+        return
     else:
-        template = password_template
-    
-    msg = personalize_msg(template, fullname, username, proj_name, password, setpass_token_url)
-
-    try:
-        email_msg(username, msg, email_type)
-    
-    except BadEmailRecipient as e:
-        # warn user that not everyone got the emails, and save the email text
-        # but continue with the script
-        print e.message
-        print "sendmail reports:\n {0}".format(e.rejected)
-        email_to_file(username, msg, email_type)
-    except:
-        email_to_file(username, msg, email_type)
-        raise
-
-def email_msg(receiver, body, email_type):
-    
-    fromaddr = config.get("gmail", "email")
-    password = config.get("gmail", "password")    
-
-    msg = MIMEText(body)
-    msg['To'] = receiver
-
-    server = smtplib.SMTP('127.0.0.1', 25)
-    server.ehlo()
-    try: 
-        server.starttls()
-    except smtplib.SMTPException as e:
-        if e.message == "STARTTLS extension not supported by server.":
-            print ("\n{0}: Sending message failed.\n".format(__file__) +
-            "See README for how to enable STARTTLS")  
-        raise e
-
-    if email_type == "new_user":   
-        msg['Cc'] = config.get("gmail", "cc_list")
-        msg['Subject'] = "MOC Welcome mail"
-        receivers = [receiver, msg['Cc']]
-        msg['From'] = fromaddr
-    elif email_type == "password":
-        receivers = receiver
-        msg['Subject'] = "MOC account password"
-        msg['From'] = fromaddr
-    elif email_type == "listserv":
-        receivers = receiver
-        # the listserv results email contains the listserv password in plaintext
-        # so send it only to the person who ran the script, not the whole CC list
-        fromaddr = config.get("mailing_list", "my_email")
-        msg['From'] = fromaddr
-    else: 
-        raise Exception("No such email type: {0}".format(email_type))
-    
-    rejected = server.sendmail(fromaddr, receivers, msg.as_string())
-    # server.sendmail only raises SMTPRecipientsRefused if *all* recipients 
-    # fail and the email cannot be sent.
-    
-    # handle the case where only some recipients fail:
-    if len(rejected):
-       raise BadEmailRecipient(rejected, msg['Subject'])
-
-def mailing_list(emails):
-    """Subscribe all new users to the mailing list"""
-    list_name = config.get('mailing_list', 'list_name')
-    list_pass = config.get('mailing_list', 'list_pass')
-    majordomo = config.get('mailing_list', 'majordomo')
-    
-    msg=""
-
-    for address in emails:
-        msg += "approve {0} subscribe {1} {2}\n".format(list_pass, list_name, address)
-        
-    email_msg(majordomo, msg, 'listserv')
+        raise InvalidEmailError('Not a valid email address: {}'.format(uname))
 
 def parse_rows(rows):
     """Parse new user data from the spreadsheet into a dictionary
@@ -370,7 +264,7 @@ if __name__ == "__main__":
     
     failed_create = []
     copy_index = []
-    emails = []
+    subscribe_emails = []
     
     for project in content:
         proj_name, proj_id = openstack.create_project(project, "", quotas)
@@ -379,21 +273,30 @@ if __name__ == "__main__":
         for user in content[project]:
             name = user["name"]
             password = random_password(16)
-            username = user["email"]
             email = user["email"]
+            username = email
             pin = user["pin"]
             user_descr = name
             try: 
+                validate_email(email)
                 openstack.create_user(name, username, password, 
                         user_descr, email, proj_id, proj_name, pin) 
                 copy_index.append(user['row'])
-                emails.append(email)                
+                subscribe_emails.append(email)                
+            except message.BadEmailRecipient as err:
+                # Warn the user that not everyone got the email, but don't
+                # otherwise treat this as a failure
+                print err.message
+                print "sendmail reports: \n {0}".format(err.rejected)
             except (UserExistsError, InvalidEmailError) as e:
                 user['error'] = e.message
                 failed_create.append(user)
 
-    mailing_list(emails)
-    
+    if subscribe_emails:
+        list_cfg = dict(config.items('listserv'))
+        listserv = message.ListservMessage(subscribe_emails, **list_cfg)
+        listserv.send()
+
     # Copy and delete only the successful rows
     if copy_index:
         copy_rows = [r for r in rows if rows.index(r) in copy_index] 

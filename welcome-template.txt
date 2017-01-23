@@ -1,9 +1,9 @@
-Hi <USER>,
+Hi <FULLNAME>,
 
 A user account and project have been created for you on MOC Production (Kaizen).  You can log in at:
 https://controller-0.kaizen.massopencloud.org
 
-Your username is "<USERNAME>", and your project is "<PROJECTNAME>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly.
+Your username is "<USERNAME>", and your project is "<PROJECT>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly.
 
 Make sure to review the following page outlining our terms, expectations, and default account settings.  Please pay particular attention to the security expectations.  Note that any VM that appears to be compromised will be shut down without warning. 
 https://info.massopencloud.org/blog/wiki/moc-kaizen-terms-best-practices/
