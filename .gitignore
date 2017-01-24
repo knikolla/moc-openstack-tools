@@ -7,5 +7,6 @@
 *.rej
 *.diff
 
-# Don't add passwords file
+# Don't add passwords file or keys
 settings.ini
+*.json
