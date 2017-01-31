@@ -119,7 +119,7 @@ class Openstack:
             print "TENANT: %-30s   \tPRESENT: YES" % name
             tenants = [(tenant.name, tenant.id) for tenant in self.keystone.tenants.list()]
             for tenant in tenants:
-                if name_low == tenant[0]:
+                if name_low == tenant[0].lower():
                     return tenant 
 
     def create_user(self, fullname, username, password, description, email, tenant_id, proj_name, pin):
