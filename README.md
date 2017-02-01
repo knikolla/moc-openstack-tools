@@ -1,6 +1,14 @@
-## Installation of dependent packages
-    pip install gspread
-    pip install oauth2client==1.5.2
+## Dependencies
+
+Packages:
+
+    python-keystoneclient
+    python-novaclient
+    python-neutronclient
+    python-cinderclient
+    google-api-python-client
+
+The script also requires a TLS-capable mail server to be running.  We have used this code with both Sendmail and Postfix.  See [below](#mail-server-config) for the Postfix config required to enable TLS.
 
 ## Getting the Signed Credentials from Google
 1. Goto [Google Developers Console](https://console.developers.google.com/project) and create a new project or select the existing one.
@@ -10,43 +18,29 @@
 5. Get the spreadsheet id and put it in settings.ini file.
 
 ## Usecase
-These scripts are to create user account and project on openstack. 
-The script can be run from the node which has keystoneclient and novaclient installed.
+These scripts simplify the process of:
 
-## How to use template_settings.ini
-Copy the template_settings.ini to settings.ini and then fill the fields required in that file.
+1. Creating users and projects in OpenStack, including defining project quotas.
+2. Sending a welcome email to new users.
+3. Using [Setpass](https://github.com/CCI-MOC/setpass) to email a link that allows new users to set their password securely.
+4. Resetting a user's password if they forget it, also via Setpass.
 
-`bash$ cp settings_template.ini settings.ini`
+New user data is assumed to be in a Google Sheet. The function parse_rows in addusers.py handles parsing the spreadsheet data, you may need to modify it to work with your particular spreadsheet format.
 
-Here is a sample copy of setting.ini file:-
-
-    [auth]
-    admin_user = admin
-    admin_pwd = somepassword
-    admin_tenant = admin
-    auth_url = https://mycontroller.org:5000/v2.0
-
-    [nova]
-    version = 2
-
-    [templates]
-    email_template = ./email-template.txt
-    password_template = ./password-template.txt
-
-    [output]
-    email_path = ./user_emails/
-    password_path = ./password_emails/
+## How to use example_settings.ini
+Copy the examplee_settings.ini to settings.ini and then fill the fields required in that file.
 
 ## Mail Server Config
 
 The mail server needs to have TLS enabled. If using postfix, add the 
 following lines to /etc/postfix/main.cf:
 
-smtpd_tls_cert_file = /path/to/cert/file
-smtpd_tls_key_file = /path/to/key/file
-smtpd_tls_security_level = may
+     smtpd_tls_cert_file = /path/to/cert/file
+     smtpd_tls_key_file = /path/to/key/file
+     smtpd_tls_security_level = may
 
 If no certificate exists, one can be generated:
+     
      openssl req -new -x509 -nodes -out /etc/postfix/postfix.pem -keyout /etc/postfix/postfix.pem -days 3650
 
 

@@ -1,7 +1,17 @@
-"""
-spreadsheet.py
-
-Simple interface for interacting with Google Sheets using the Sheets API v4
+#   Copyright 2016 Massachusetts Open Cloud
+#
+#   Licensed under the Apache License, Version 2.0 (the "License"); you may
+#   not use this file except in compliance with the License. You may obtain
+#   a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#   License for the specific language governing permissions and limitations
+#   under the License.
+"""Simple interface for interacting with Google Sheets API v4
 
 To install the google-api-python-client:
     # pip install --upgrade google-api-python-client
@@ -9,8 +19,6 @@ To install the google-api-python-client:
 Google Sheets API reference is:
     https://developers.google.com/sheets/reference/rest/
 """
-__author__ = "kamfonik@bu.edu"
-
 import json
 from httplib2 import Http
 from operator import itemgetter
@@ -181,11 +189,3 @@ class Spreadsheet(Resource):
                 insertDataOption='INSERT_ROWS', body=body)        
         return req.execute()
 
-if __name__ == "__main__": 
-    keyfile = '-- JSON key file name --'
-    sheet_id = '-- worksheet ID from URL --'
-    
-    sheet = Spreadsheet(keyfile, sheet_id)
-    rows = sheet.get_all_rows('Form Responses 1')
-    resp = sheet.append_rows(rows[1:], 'Current Users')
-     

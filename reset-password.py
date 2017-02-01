@@ -1,5 +1,33 @@
-__author__ = ' kamfonik@bu.edu'
+#   Copyright 2016 Massachusetts Open Cloud
+#
+#   Licensed under the Apache License, Version 2.0 (the "License"); you may
+#   not use this file except in compliance with the License. You may obtain
+#   a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#   License for the specific language governing permissions and limitations
+#   under the License.
+"""Script allowing a new user to reset their password securely.  
 
+Th script performs the following  actions:
+    - Resets the user's OpenStack password to a random string
+    - Add the user, new password, and PIN to the Setpass service
+    - Generates a Setpass link the user will visit to reset their password
+    - Send the link via email to the user 
+
+Usage:
+    python reset-password.py <username> <PIN>
+
+The PIN must be a 4-digit number and the user must provide it to successfully
+set their new password. 
+
+For more information on the Setpass service see:
+https://github.com/CCI-MOC/setpass 
+"""
 import sys
 import string
 import random

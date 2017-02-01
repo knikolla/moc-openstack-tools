@@ -1,12 +1,12 @@
 Hi <FULLNAME>,
 
 A user account and project have been created for you on MOC Production (Kaizen).  You can log in at:
-https://controller-0.kaizen.massopencloud.org
+<LOGIN_URL>
 
 Your username is "<USERNAME>", and your project is "<PROJECT>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly.
 
 Make sure to review the following page outlining our terms, expectations, and default account settings.  Please pay particular attention to the security expectations.  Note that any VM that appears to be compromised will be shut down without warning. 
-https://info.massopencloud.org/blog/wiki/moc-kaizen-terms-best-practices/
+<TERMS_URL>
 
 We also suggest you take the following steps to prevent lost data / wasted work:
 
@@ -15,10 +15,10 @@ We also suggest you take the following steps to prevent lost data / wasted work:
 2. Keep a separate backup of any critical data in your OpenStack instances.  Our Ceph Storage backend includes multiple copies of cluster data, but we don't currently maintain a secondary disaster-recovery backup.  
 
 More information on getting started with OpenStack can be found here:
-https://github.com/CCI-MOC/moc-public/wiki/Getting-started
+<GETTING_STARTED_URL>
 
 If you have any questions, or if you encounter any issues with your account or project, please send an email to:
-moc-kaizen-l@bu.edu
+<SUPPORT_EMAIL>
 
 Thanks,
 The MOC Team

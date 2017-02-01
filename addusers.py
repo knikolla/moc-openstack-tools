@@ -1,5 +1,37 @@
-__author__ = 'rahuls@ccs.neu.edu, kamfonik@bu.edu'
+#   Copyright 2016 Massachusetts Open Cloud
+#
+#   Licensed under the Apache License, Version 2.0 (the "License"); you may
+#   not use this file except in compliance with the License. You may obtain
+#   a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#   License for the specific language governing permissions and limitations
+#   under the License.
+"""Add new users and projects to OpenStack using Google Sheets data
 
+For each new user definition the script will:
+    - Create the user's project if it doesn't exist
+    - Modify the project's quotas according to quotas defined in settings.ini
+    - Create the user, set their password to a random string
+    - Add the user, password, and PIN to the Setpass service
+    - Generates a Setpass link the user will visit to reset their password
+    - Send a welcome email and a password link email to the new user
+
+Once all users have been processed, the script will:
+    - Send a single email subscribing all new users to a mailing list
+    - Move the succesfully created users to another worksheet in Google Sheets
+    - Print information about any users skipped due to missing/invalid data
+
+For more information on the Setpass service see:
+https://github.com/CCI-MOC/setpass 
+
+Usage:
+    python addusers.py
+"""
 import json
 import string
 import random
