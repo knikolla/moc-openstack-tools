@@ -50,7 +50,8 @@ config.read(CONFIG_FILE)
 
 admin_user = config.get('auth', 'admin_user')
 admin_pwd = config.get('auth', 'admin_pwd')
-auth_url = config.get('setpass', 'keystone_v3_url')
+admin_project = config.get('auth', 'admin_project')
+auth_url = config.get('auth', 'auth_url')
 setpass_url = config.get('setpass', 'setpass_url')
 
 def random_password(size):
@@ -58,13 +59,9 @@ def random_password(size):
     return ''.join(random.choice(chars) for _ in range(size))
 
 class Setpass:
-    def __init__(self, keystone_v3_url, keystone_admin, keystone_password, setpass_url):
+    def __init__(self, session, setpass_url):
         self.url = setpass_url
-        auth = v3.Password(auth_url=keystone_v3_url,
-                           username=keystone_admin,
-                           user_domain_id = 'default',
-                           password=keystone_password)
-        self.session = session.Session(auth=auth)
+        self.session = session
     
     def get_token(self, userid, password, pin):
         """ Add the user ID and random password to the setpass database.  
@@ -99,8 +96,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    setpass = Setpass(auth_url, admin_user, admin_pwd, setpass_url)
-    keystone = client.Client(session=setpass.session)
+    auth = v3.Password(auth_url=auth_url,
+                       username=admin_user,
+                       user_domain_id = 'default',
+                       project_name = admin_project,
+                       project_domain_id = 'default',
+                       password=admin_pwd)
+    sess = session.Session(auth=auth)
+
+    setpass = Setpass(sess, setpass_url)
+    keystone = client.Client(session=sess)
   
     user = [usr for usr in keystone.users.list() if usr.name == args.username]
     if not user:

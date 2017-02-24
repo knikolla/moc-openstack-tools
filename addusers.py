@@ -37,7 +37,7 @@ import string
 import random
 import re
 import ConfigParser
-from keystoneclient.v2_0 import client
+from keystoneclient.v3 import client
 from novaclient import client as novaclient
 from neutronclient.v2_0 import client as neutronclient
 from cinderclient.v2 import client as cinderclient
@@ -57,12 +57,10 @@ config.read(CONFIG_FILE)
 
 admin_user = config.get('auth', 'admin_user')
 admin_pwd = config.get('auth', 'admin_pwd')
-admin_tenant = config.get('auth', 'admin_tenant')
+admin_project = config.get('auth', 'admin_project')
 auth_url = config.get('auth', 'auth_url')
-region_name = config.get('auth', 'region_name') # not needed in Mitaka
 nova_version = config.get('nova', 'version')
 
-keystone_v3_url = config.get('setpass', 'keystone_v3_url')
 setpass_url = config.get('setpass', 'setpass_url')
 
 class InvalidEmailError(Exception):
@@ -76,13 +74,9 @@ def random_password(size):
     return ''.join(random.choice(chars) for _ in range(size))
 
 class Setpass:
-    def __init__(self, keystone_v3_url, keystone_admin, keystone_password, setpass_url):
+    def __init__(self, session, setpass_url):
         self.url = setpass_url
-        auth = v3.Password(auth_url=keystone_v3_url,
-                           username=keystone_admin,
-                           user_domain_id = 'default',
-                           password=keystone_password)
-        self.session = session.Session(auth=auth)
+        self.session = session
     
     def get_token(self, userid, password, pin):
         """ Add the user ID and random password to the setpass database.  
@@ -102,66 +96,44 @@ class Setpass:
 
 class Openstack:
 
-    def __init__(self, uname, password, tname, auth_url, nova_version):
-        self.keystone = client.Client(username=uname,
-                                      password=password,
-                                      tenant_name=tname,
-                                      auth_url=auth_url)
-        self.nova = novaclient.Client(nova_version,
-                                      uname,
-                                      password,
-                                      tname,
-                                      auth_url)
-
-        """
-        region_name is passed to neutronclient to avoid this warning: 
-             keystoneclient/service_catalog.py:196: UserWarning: Providing 
-             attr without filter_value to get_urls() is deprecated as of 
-             the 1.7.0 release and may be removed in the 2.0.0 release." 
-             Either both should be provided or neither should be provided.
-        Liberty neutronclient hard-codes passing the attr 'region' so we
-        must supply the filter_value region_name.  This issue is fixed in
-        Mitaka neutronclient.
-        """
-        self.neutron = neutronclient.Client(username=uname,
-                                            password=password,
-                                            tenant_name=tname,
-                                            auth_url=auth_url,
-                                            region_name=region_name)
-        self.cinder = cinderclient.Client(uname,
-                                          password,
-                                          tname,
-                                          auth_url)
+    def __init__(self, session, nova_version, setpass_url):
+        self.keystone = client.Client(session=session)
+        self.nova = novaclient.Client(nova_version, session=session)
+        self.neutron = neutronclient.Client(session=session)
+        self.cinder = cinderclient.Client(session=session)
    
-        self.setpass = Setpass(keystone_v3_url, uname, password, setpass_url) 
+        self.setpass = Setpass(session, setpass_url) 
     
     def create_project(self, name, description, quotas):
-        tenants = [tenant.name.lower() for tenant in self.keystone.tenants.list()]
+        projects = [project.name.lower() for project in self.keystone.projects.list()]
         name_low = name.lower()
-        if name_low not in tenants:
-            print "TENANT: %-30s   \tPRESENT: NO, CREATING IT" % name
-            tenant = self.keystone.tenants.create(tenant_name=name,
-                                                  description=description,
-                                                  enabled=True)
+        if name_low not in projects:
+            print "PROJECT: %-30s   \tPRESENT: NO, CREATING IT" % name
+            project = self.keystone.projects.create(name=name,
+                                                    domain='default',
+                                                    description=description,
+                                                    enabled=True)
 
             # we only want to set quotas for newly created projects
-            self.modify_quotas(tenant.id, name, **quotas)
-            return tenant.name, tenant.id
+            self.modify_quotas(project.id, name, **quotas)
+            return project.name, project.id
         else:
-            print "TENANT: %-30s   \tPRESENT: YES" % name
-            tenants = [(tenant.name, tenant.id) for tenant in self.keystone.tenants.list()]
-            for tenant in tenants:
-                if name_low == tenant[0].lower():
-                    return tenant 
+            print "PROJECT: %-30s   \tPRESENT: YES" % name
+            projects = [(project.name, project.id) for project in self.keystone.projects.list()]
+            for project in projects:
+                if name_low == project[0].lower():
+                    return project 
 
-    def create_user(self, fullname, username, password, description, email, tenant_id, proj_name, pin):
+    def create_user(self, fullname, username, password, description, email, project_id, proj_name, pin):
         users = [user.name for user in self.keystone.users.list()]
         if username not in users:
             print "\tUSER: %-30s    PRESENT: NO, CREATING IT" % username
             user = self.keystone.users.create(name=username,
                                               email=email,
                                               password=password,
-                                              tenant_id=tenant_id)
+                                              default_project=project_id,
+                                              domain='default',
+                                              description=description)
             
             setpass_token = self.setpass.get_token(user.id, password, pin)
             password_url = self.setpass.get_url(setpass_token)
@@ -184,9 +156,9 @@ class Openstack:
             print "\tUSER: %-30s    PRESENT: YES" % username
             raise UserExistsError("User exists: {0}.".format(username))
 
-    def modify_quotas(self, tenant_id, tenant_name, **kwargs):
+    def modify_quotas(self, project_id, project_name, **kwargs):
         """
-        Set quota values for the given tenant.
+        Set quota values for the given project.
         
         NOTE: Quotas are managed through their related service, but 
         novaclient.quotas.get() reports dummy values for the following
@@ -229,10 +201,10 @@ class Openstack:
                         key, kwargs[key])
                 
         neutron_quotas = { "quota" : neutron_quotas }
-        new_neutron = self.neutron.update_quota(tenant_id, 
+        new_neutron = self.neutron.update_quota(project_id, 
                 body=neutron_quotas )       
-        new_nova = self.nova.quotas.update(tenant_id, **nova_quotas)
-        new_cinder = self.cinder.quotas.update(tenant_id, **cinder_quotas)
+        new_nova = self.nova.quotas.update(project_id, **nova_quotas)
+        new_cinder = self.cinder.quotas.update(project_id, **cinder_quotas)
 
         # NOTE: liberty cinderclient is missing the to_dict method in 
         # class Resource in cinderclient/openstack/common/apiclient/base.py
@@ -285,7 +257,15 @@ def parse_rows(rows):
     return projects, bad_rows
 
 if __name__ == "__main__":
-    openstack = Openstack(admin_user, admin_pwd, admin_tenant, auth_url, nova_version)
+    auth = v3.Password(auth_url=auth_url,
+                       username=admin_user,
+                       user_domain_id = 'default',
+                       password=admin_pwd,
+                       project_domain_id = 'default',
+                       project_name = admin_project)
+    session = session.Session(auth=auth)
+    
+    openstack = Openstack(session=session, nova_version=nova_version, setpass_url=setpass_url)
     auth_file = config.get("excelsheet", "auth_file")
     worksheet_key = config.get("excelsheet", "worksheet_key")
     quotas = dict(config.items('quotas'))
