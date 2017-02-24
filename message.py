@@ -23,7 +23,7 @@ class BadEmailRecipient(Exception):
     def __init__(self, rdict, subject):
         self.__name__ = 'BadEmailRecipient'
         self.rejected = rdict
-        self.message = ("Message {0} could not be sent to one or more ",
+        self.message = ("Message '{0}' could not be sent to one or more "
                         "recipients.").format(subject)
 
 
