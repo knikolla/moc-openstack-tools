@@ -29,12 +29,14 @@ class BadEmailRecipient(Exception):
 
 class Message(object):
     """Base class for email messages."""
-    def __init__(self, sender, receiver, body, subject=None, cc_list=None):
+    def __init__(self, sender, receiver, body, subject=None, cc_list=None,
+                 formatting='plain'):
         self.sender = sender
         self.receiver = receiver
         self.cc_list = cc_list
         self.subject = subject
         self.body = body
+        self._format = formatting
 
     def _personalize(self, template, **kwargs):
         """Populate the given email template with customized values
@@ -72,7 +74,7 @@ class Message(object):
 
     def send(self, mail_ip='127.0.0.1', mail_port='25'):
         """ Send the message """
-        msg = MIMEText(self.body)
+        msg = MIMEText(self.body, self._format)
         msg['Subject'] = self.subject
         msg['From'] = self.sender
         msg['To'] = self.receiver
@@ -101,13 +103,14 @@ class TemplateMessage(Message):
     placeholder in the template file with the form `<KEYWORD>`.
     """
     def __init__(self, template, sender, email, subject=None, cc_list=None,
-                 **kwargs):
+                 formatting='plain', **kwargs):
         body = self._personalize(template, **kwargs)
         super(TemplateMessage, self).__init__(receiver=email,
                                               body=body,
                                               subject=subject,
                                               sender=sender,
-                                              cc_list=cc_list)
+                                              cc_list=cc_list,
+                                              formatting=formatting)
 
 
 class ListservMessage(Message):

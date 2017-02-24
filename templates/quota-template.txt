@@ -1,0 +1,10 @@
+<html>
+<body>
+  <p>Hi <FULLNAME>,</p>
+  <p>The quota update you requested for the project <PROJECT> is complete.</p>
+  <p>The following quotas were updated:
+    <pre style="font: monospace"><QUOTA_LIST></pre>
+  </p>
+  <p>Best,<br>The MOC Team</p>
+</body>
+</html>

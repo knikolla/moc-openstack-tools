@@ -10,7 +10,7 @@ cache:
   - pip
 
 install:
-  - pip install flake8 pytest
+    - pip install flake8 pytest python-novaclient python-neutronclient python-cinderclient
 
 script:
   - py.test
