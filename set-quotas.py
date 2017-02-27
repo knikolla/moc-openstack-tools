@@ -122,17 +122,19 @@ if __name__ == "__main__":
     config.read('settings.ini')
     admin_user = config.get('auth', 'admin_user')
     admin_pwd = config.get('auth', 'admin_pwd')
-    admin_tenant = config.get('auth', 'admin_tenant')
+    admin_project = config.get('auth', 'admin_project')
+    auth_url = config.get('auth', 'auth_url')
     nova_version = config.get('nova', 'version')
-    keystone_v3_url = config.get('setpass', 'keystone_v3_url')
     quota_auth_file = config.get('quota_sheet', 'auth_file')
     quota_worksheet_key = config.get('quota_sheet', 'worksheet_key')
     quota_template = config.get('quota_email', 'template')
 
     # openstack auth
-    auth = v3.Password(auth_url=keystone_v3_url,
+    auth = v3.Password(auth_url=auth_url,
                        username=admin_user,
                        user_domain_id='default',
+                       project_name=admin_project,
+                       project_domain_id='default',
                        password=admin_pwd)
     session = session.Session(auth=auth)
     keystone = client.Client(session=session)
