@@ -64,7 +64,9 @@ def parse_rows(rows):
             # entry[7] is the Comments from the Temporary page (deprecated)
             quotas = {'instances': entry[8],
                       'cores': entry[9],
-                      'ram': entry[10],
+                      # form requests RAM amount in GB so the users don't
+                      # get confused over multiplying by 1000 vs 1024
+                      'ram': entry[10] * 1024,
                       'floatingip': entry[11],
                       'volumes': entry[12],
                       'snapshots': entry[13],
