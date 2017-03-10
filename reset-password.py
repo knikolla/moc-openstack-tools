@@ -29,19 +29,16 @@ For more information on the Setpass service see:
 https://github.com/CCI-MOC/setpass 
 """
 import sys
-import string
-import random
 import re
 import argparse
 import ConfigParser
 from keystoneclient.v3 import client
-
-#setpass
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
 #local import
 from message import TemplateMessage
+from setpass import SetpassClient, random_password
 
 CONFIG_FILE = "settings.ini"
 
@@ -54,31 +51,6 @@ admin_project = config.get('auth', 'admin_project')
 auth_url = config.get('auth', 'auth_url')
 setpass_url = config.get('setpass', 'setpass_url')
 
-def random_password(size):
-    chars = string.ascii_letters + string.digits + string.punctuation[2:6]
-    return ''.join(random.choice(chars) for _ in range(size))
-
-class Setpass:
-    def __init__(self, session, setpass_url):
-        self.url = setpass_url
-        self.session = session
-    
-    def get_token(self, userid, password, pin):
-        """ Add the user ID and random password to the setpass database.  
-        
-        Returns a token allowing the user to set their password.
-        """
-        body = { 'password': password, 'pin': pin }
-        request_url = '{base}/token/{userid}'.format(base=self.url, userid=userid)
-        response = self.session.put(request_url, json=body)
-        token = response.text
-        return token
-
-    def get_url(self, token):
-        """ Generate URL for the user to set their password """
-        url = "{base}?token={token}".format(base=self.url, token=token)
-        return url
-
 
 def validate_pin(pin):
     """Check that PIN is 4 digits"""
@@ -87,6 +59,7 @@ def validate_pin(pin):
         raise argparse.ArgumentTypeError(msg)
     else:
         return pin
+
 
 if __name__ == "__main__":
     
@@ -104,7 +77,7 @@ if __name__ == "__main__":
                        password=admin_pwd)
     sess = session.Session(auth=auth)
 
-    setpass = Setpass(sess, setpass_url)
+    setpass = SetpassClient(sess, setpass_url)
     keystone = client.Client(session=sess)
   
     user = [usr for usr in keystone.users.list() if usr.name == args.username]
@@ -120,7 +93,6 @@ if __name__ == "__main__":
     token = setpass.get_token(user.id, newpass, args.PIN)
    
     url = setpass.get_url(token)
-
     email_config = dict(config.items('password_email'))
     email = TemplateMessage(email=args.username, fullname=args.username, setpass_token_url=url, **email_config)
     try:

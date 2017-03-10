@@ -33,22 +33,19 @@ Usage:
     python addusers.py
 """
 import json
-import string
-import random
 import re
 import ConfigParser
 from keystoneclient.v3 import client
 from novaclient import client as novaclient
 from neutronclient.v2_0 import client as neutronclient
 from cinderclient.v2 import client as cinderclient
-
-#setpass
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
 #local
 import message
 import spreadsheet
+from setpass import SetpassClient, random_password
 
 CONFIG_FILE = "settings.ini"
 
@@ -69,30 +66,6 @@ class InvalidEmailError(Exception):
 class UserExistsError(Exception):
     """User already exists and cannot be created"""
 
-def random_password(size):
-    chars = string.ascii_letters + string.digits + string.punctuation[2:6]
-    return ''.join(random.choice(chars) for _ in range(size))
-
-class Setpass:
-    def __init__(self, session, setpass_url):
-        self.url = setpass_url
-        self.session = session
-    
-    def get_token(self, userid, password, pin):
-        """ Add the user ID and random password to the setpass database.  
-        
-        Returns a token allowing the user to set their password.
-        """
-        body = { 'password': password, 'pin': pin }
-        request_url = '{base}/token/{userid}'.format(base=self.url, userid=userid)
-        response = self.session.put(request_url, json=body)
-        token = response.text
-        return token
-
-    def get_url(self, token):
-        """ Generate URL for the user to set their password """
-        url = "{base}?token={token}".format(base=self.url, token=token)
-        return url
 
 class Openstack:
 
@@ -102,7 +75,7 @@ class Openstack:
         self.neutron = neutronclient.Client(session=session)
         self.cinder = cinderclient.Client(session=session)
    
-        self.setpass = Setpass(session, setpass_url) 
+        self.setpass = SetpassClient(session, setpass_url) 
     
     def create_project(self, name, description, quotas):
         projects = [project.name.lower() for project in self.keystone.projects.list()]
