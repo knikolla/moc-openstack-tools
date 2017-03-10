@@ -36,32 +36,75 @@ class QuotaManager:
         current_quotas = _get_single_dict(nova, neutron, cinder)
         return current_quotas
 
-    def modify_quotas(self, tenant_id, **kwargs):
-        """Set quota values for the given tenant."""
+    def modify_quotas(self, project_id, **kwargs):
+        """Set quota values for the given project."""
         new_quotas = _group_quotas(**kwargs)
+
+        # If no update is given for ports but related quotas are updated, check
+        # whether ports should also be updated. Users don't necessarily know to
+        # to ask for this
+        if 'port' not in kwargs and ('instances' in kwargs or
+                                     'network' in kwargs):
+            new_port_quota = self._check_port_quota(project_id, **kwargs)
+            if new_port_quota:
+                new_quotas['neutron']['port'] = new_port_quota
+                # `TODO: Get the project object passed into this function,
+                # so we can use the name instead of the ID here
+                print ("NOTICE: Auto-adjusted port quota to {} "
+                       "for project {}").format(new_port_quota, project_id)
         
         neutron_quotas = {"quota": new_quotas['neutron']}
-        new_neutron = self.neutron.update_quota(tenant_id,
+        new_neutron = self.neutron.update_quota(project_id,
                                                 body=neutron_quotas)
-        new_nova = self.nova.quotas.update(tenant_id, **new_quotas['nova'])
-        new_cinder = self.cinder.quotas.update(tenant_id,
+        new_nova = self.nova.quotas.update(project_id, **new_quotas['nova'])
+        new_cinder = self.cinder.quotas.update(project_id,
                                                **new_quotas['cinder'])
  
         all_quotas = _get_single_dict(new_nova, new_neutron, new_cinder)
         return all_quotas
 
+    def _check_port_quota(self, project_id, **kwargs):
+        """Check whether quota updates should trigger a port quota update.
 
+        Users may ask to increase to their instance or network quota without
+        knowing that their ports quota should also be increased.  Ensure they
+        will have enough ports to use the other increases.
+        """
+        current_quotas = self.get_current(project_id)
+        add_port_count = 0
+
+        if ('network') in kwargs:
+            # Increase port quota by 2 for each new network to allow for
+            # one DHCP port and one router interface
+            added_networks = kwargs['network'] - current_quotas['network']
+            add_port_count = added_networks * 2
+        
+        if ('instances' in kwargs):
+            # Get a count of existing ports not used by instances
+            port_list = self.neutron.list_ports(project=project_id)['ports']
+            non_compute_ports_used = len([p for p in port_list if
+                                          p['device_owner'] != 'compute:nova'])
+            
+            # Check whether we will have at least 1 port per instance
+            # TODO: do we want to add some 'padding' ports here?
+            min_ports_needed = kwargs['instances'] + non_compute_ports_used
+            if (current_quotas['port']) < min_ports_needed:
+                quota_gap = min_ports_needed - current_quotas['port']
+                add_port_count += quota_gap
+
+        if add_port_count:
+            return (current_quotas['port'] + add_port_count)
+        else:
+            return False
+
+ 
 def _get_single_dict(nova, neutron, cinder):
     """Create a single dictionary of quota values"""
     if type(nova) is not dict:
         nova = nova.to_dict()
     
-    # NOTE: liberty cinderclient is missing the to_dict method in
-    # class Resource in cinderclient/openstack/common/apiclient/base.py
-    # This is fixed in Mitaka, but for now we need to use an internal
-    # attribute '._info'
     if type(cinder) is not dict:
-        cinder = cinder._info
+        cinder = cinder.to_dict()
 
     single_dict = nova
     single_dict.update(neutron)
