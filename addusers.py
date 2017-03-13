@@ -37,15 +37,13 @@ import re
 import ConfigParser
 import argparse
 from keystoneclient.v3 import client
-from novaclient import client as novaclient
-from neutronclient.v2_0 import client as neutronclient
-from cinderclient.v2 import client as cinderclient
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
 #local
 import message
 import spreadsheet
+from quotas import QuotaManager
 from setpass import SetpassClient, random_password
 from config import set_config_file
 
@@ -61,12 +59,9 @@ class Openstack:
 
     def __init__(self, session, nova_version, setpass_url):
         self.keystone = client.Client(session=session)
-        self.nova = novaclient.Client(nova_version, session=session)
-        self.neutron = neutronclient.Client(session=session)
-        self.cinder = cinderclient.Client(session=session)
-   
         self.setpass = SetpassClient(session, setpass_url) 
-    
+        self.quotas = QuotaManager(session, nova_version)
+ 
     def create_project(self, name, description, quotas):
         projects = [project.name.lower() for project in self.keystone.projects.list()]
         name_low = name.lower()
@@ -78,7 +73,7 @@ class Openstack:
                                                     enabled=True)
 
             # we only want to set quotas for newly created projects
-            self.modify_quotas(project.id, name, **quotas)
+            updated_quotas = self.quotas.modify_quotas(project.id, **quotas)
             return project.name, project.id
         else:
             print "PROJECT: %-30s   \tPRESENT: YES" % name
@@ -119,65 +114,6 @@ class Openstack:
             print "\tUSER: %-30s    PRESENT: YES" % username
             raise UserExistsError("User exists: {0}.".format(username))
 
-    def modify_quotas(self, project_id, project_name, **kwargs):
-        """
-        Set quota values for the given project.
-        
-        NOTE: Quotas are managed through their related service, but 
-        novaclient.quotas.get() reports dummy values for the following
-        even when neutron is managing networks:
-            floating_ips, security_group_rules, security_groups
-        
-        If networks are managed by neutron, the values reported by nova are 
-        not accurate, and updates made via novaclient have no effect
-        """
-
-        # Quotas managed by neutronclient
-        neutron = [ 'subnet', 'network', 'floatingip', 'subnetpool', 
-                'security_group_rule', 'security_group', 'router', 
-                'rbac_policy', 'port' ]
-
-        # Quotas managed by novaclient
-        # TODO: Test whether novaclient manages these quotas:
-        #    fixed_ips, server_group_members, server_groups
-        nova = [ 'cores', 'injected_file_content_bytes', 
-                 'inject_file_path_bytes', 'injected_files', 'instances', 
-                 'key_pairs', 'metadata_items', 'ram' ]
-
-        # Quotas managed by cinderclient
-        cinder = [ 'gigabytes', 'snapshots', 'volumes', 'backup_gigabytes', 
-                   'backups', 'per_volume_gigabytes' ]
- 
-        neutron_quotas = dict()
-        nova_quotas = dict()
-        cinder_quotas = dict()
-
-        for key in kwargs:
-            if key in neutron:
-                neutron_quotas[key]=kwargs[key] 
-            elif key in nova:
-                nova_quotas[key]=kwargs[key]
-            elif key in cinder: 
-                cinder_quotas[key]=kwargs[key]
-            else:
-                print "\tWARNING: Unrecognized quota '{0}={1}'".format(
-                        key, kwargs[key])
-                
-        neutron_quotas = { "quota" : neutron_quotas }
-        new_neutron = self.neutron.update_quota(project_id, 
-                body=neutron_quotas )       
-        new_nova = self.nova.quotas.update(project_id, **nova_quotas)
-        new_cinder = self.cinder.quotas.update(project_id, **cinder_quotas)
-
-        # NOTE: liberty cinderclient is missing the to_dict method in 
-        # class Resource in cinderclient/openstack/common/apiclient/base.py
-        # This is fixed in Mitaka, but for now we need to use an internal 
-        # attribute '._info'
-
-        all_quotas = new_neutron['quota']
-        all_quotas.update(new_nova.to_dict())
-        all_quotas.update(new_cinder._info)
-        print "Quotas: {0}\n".format(json.dumps(all_quotas))
 
 def validate_email(uname):
     """Check that the email address provided matches a few simple rules
