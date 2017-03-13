@@ -22,11 +22,13 @@ For each entry in the Google Sheet, the script will:
 Usage:
     python set-quotas.py
 """
+import argparse
 import ConfigParser
 from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
+from config import set_config_file
 from quotas import QuotaManager
 from message import TemplateMessage
 import spreadsheet
@@ -119,9 +121,22 @@ def match_keystone_project(all_ks_projects, form_project):
 
 if __name__ == "__main__":
 
+    help_description = ("Update OpenStack project quotas using data from "
+                        "Google Sheets.")
+    parser = argparse.ArgumentParser(description=help_description)
+    parser.add_argument('-c', '--config',
+                        help='Specify configuration file.')
+
+    args = parser.parse_args()
+   
+    if args.config is not None:
+        CONFIG_FILE = set_config_file(args.config)
+    else:
+        CONFIG_FILE = set_config_file()
+
     # configuration
     config = ConfigParser.ConfigParser()
-    config.read('settings.ini')
+    config.read(CONFIG_FILE)
     admin_user = config.get('auth', 'admin_user')
     admin_pwd = config.get('auth', 'admin_pwd')
     admin_project = config.get('auth', 'admin_project')

@@ -35,6 +35,7 @@ Usage:
 import json
 import re
 import ConfigParser
+import argparse
 from keystoneclient.v3 import client
 from novaclient import client as novaclient
 from neutronclient.v2_0 import client as neutronclient
@@ -46,19 +47,8 @@ from keystoneauth1 import session
 import message
 import spreadsheet
 from setpass import SetpassClient, random_password
+from config import set_config_file
 
-CONFIG_FILE = "settings.ini"
-
-config = ConfigParser.ConfigParser()
-config.read(CONFIG_FILE)
-
-admin_user = config.get('auth', 'admin_user')
-admin_pwd = config.get('auth', 'admin_pwd')
-admin_project = config.get('auth', 'admin_project')
-auth_url = config.get('auth', 'auth_url')
-nova_version = config.get('nova', 'version')
-
-setpass_url = config.get('setpass', 'setpass_url')
 
 class InvalidEmailError(Exception):
     """User's email address does not pass basic format validation"""
@@ -230,6 +220,27 @@ def parse_rows(rows):
     return projects, bad_rows
 
 if __name__ == "__main__":
+    
+    help_description = ("Add new users and projects to OpenStack using " 
+                        "data from Google Sheets.")
+    parser = argparse.ArgumentParser(description=help_description)
+    parser.add_argument('-c', '--config', 
+                        help='Specify configuration file.')
+
+    args = parser.parse_args()
+   
+    CONFIG_FILE = set_config_file(args.config)
+
+    config = ConfigParser.ConfigParser()
+    config.read(CONFIG_FILE)
+
+    admin_user = config.get('auth', 'admin_user')
+    admin_pwd = config.get('auth', 'admin_pwd')
+    admin_project = config.get('auth', 'admin_project')
+    auth_url = config.get('auth', 'auth_url')
+    nova_version = config.get('nova', 'version')
+
+    setpass_url = config.get('setpass', 'setpass_url')
     auth = v3.Password(auth_url=auth_url,
                        username=admin_user,
                        user_domain_id = 'default',

@@ -39,17 +39,7 @@ from keystoneauth1 import session
 #local import
 from message import TemplateMessage
 from setpass import SetpassClient, random_password
-
-CONFIG_FILE = "settings.ini"
-
-config = ConfigParser.ConfigParser()
-config.read(CONFIG_FILE)
-
-admin_user = config.get('auth', 'admin_user')
-admin_pwd = config.get('auth', 'admin_pwd')
-admin_project = config.get('auth', 'admin_project')
-auth_url = config.get('auth', 'auth_url')
-setpass_url = config.get('setpass', 'setpass_url')
+from config import set_config_file
 
 
 def validate_pin(pin):
@@ -66,9 +56,25 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Reset an existing user's password")
     parser.add_argument('username',help='username of the user whose password you wish to reset')
     parser.add_argument('PIN', type=validate_pin, help='Four-digit PIN provided by the user')
+    parser.add_argument('-c', '--config', 
+                        help='Specify configuration file.')
 
     args = parser.parse_args()
-
+    
+    if args.config is not None:
+        CONFIG_FILE = set_config_file(args.config)
+    else:
+        CONFIG_FILE = set_config_file()
+    
+    config = ConfigParser.ConfigParser()
+    config.read(CONFIG_FILE)
+    
+    admin_user = config.get('auth', 'admin_user')
+    admin_pwd = config.get('auth', 'admin_pwd')
+    admin_project = config.get('auth', 'admin_project')
+    auth_url = config.get('auth', 'auth_url')
+    setpass_url = config.get('setpass', 'setpass_url')
+    
     auth = v3.Password(auth_url=auth_url,
                        username=admin_user,
                        user_domain_id = 'default',
