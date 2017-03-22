@@ -89,9 +89,15 @@ class Openstack:
             user = self.keystone.users.create(name=username,
                                               email=email,
                                               password=password,
-                                              default_project=project_id,
+                                              #default_project=project_id,
                                               domain='default',
                                               description=description)
+
+            # NOTE 22 Mar 2017: this inherits auth_url and ks_member_role.id from __main__, this will
+            # be fixed by an in-progress PR, we just need this added for now to keep things working
+            # in the meantime
+            
+            self.grant_role(auth_url, project_id, user.id, ks_member_role.id)
             
             setpass_token = self.setpass.get_token(user.id, password, pin)
             password_url = self.setpass.get_url(setpass_token)
@@ -113,6 +119,11 @@ class Openstack:
         else:
             print "\tUSER: %-30s    PRESENT: YES" % username
             raise UserExistsError("User exists: {0}.".format(username))
+
+    def grant_role(self, auth_url, project_id, user_id, role_id):
+        """Grants the user the specified role on the project."""
+        url = '{}/projects/{}/users/{}/roles/{}'.format(auth_url, project_id, user_id, role_id)
+        return self.keystone.session.put(url)
 
 
 def validate_email(uname):
@@ -194,6 +205,8 @@ if __name__ == "__main__":
     rows = sheet.get_all_rows("Form Responses 1")
     content, bad_rows = parse_rows(rows)
     
+    ks_member_role = openstack.keystone.roles.find(name='_member_')
+
     failed_create = []
     copy_index = []
     subscribe_emails = []
