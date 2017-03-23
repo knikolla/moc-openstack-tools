@@ -99,7 +99,9 @@ if __name__ == "__main__":
     token = setpass.get_token(user.id, newpass, args.PIN)
    
     url = setpass.get_url(token)
-    email_config = dict(config.items('password_email'))
+    email_config = dict(config.items('email_defaults'))
+    email_config.update(dict(config.items('reset_password_email')))
+
     email = TemplateMessage(email=args.username, fullname=args.username, setpass_token_url=url, **email_config)
     try:
         email.send()

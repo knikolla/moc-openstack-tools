@@ -118,18 +118,16 @@ class ListservMessage(Message):
     
     Each line of the email is constructed using the specified template file.
     """
-    def __init__(self, users, template, sender, majordomo, list_name,
-                 list_pass):
-        body = self._subscriptions(users, template, list_name, list_pass)
+    def __init__(self, users, template, sender, majordomo, **kwargs):
+        body = self._subscriptions(users, template, **kwargs)
         super(ListservMessage, self).__init__(sender, majordomo, body)
 
-    def _subscriptions(self, users, template, list_name, list_pass):
+    def _subscriptions(self, users, template, **kwargs):
         """Generate the subscription email body, one line per user"""
         msg = ""
         for user in users:
             line = self._personalize(template=template,
                                      email=user,
-                                     list_name=list_name,
-                                     list_pass=list_pass)
+                                     **kwargs)
             msg = "\n".join([msg, line.strip()])
         return msg

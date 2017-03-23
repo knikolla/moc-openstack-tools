@@ -182,8 +182,8 @@ if __name__ == "__main__":
         
         new_quotas = quota_manager.modify_quotas(ks_project.id,
                                                  **project['quotas'])
-    
-        quota_cfg = dict(config.items('quota_email'))
+        quota_cfg = dict(config.items('email_defaults'))
+        quota_cfg.update(dict(config.items('quota_email')))
         quota_cfg['subject'] = quota_cfg['subject'].format(
             project=ks_project.name)
         

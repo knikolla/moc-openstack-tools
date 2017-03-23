@@ -101,12 +101,15 @@ class Openstack:
             
             setpass_token = self.setpass.get_token(user.id, password, pin)
             password_url = self.setpass.get_url(setpass_token)
-
-            usr_cfg = dict(config.items('welcome_email'))
-            pwd_cfg = dict(config.items('password_email'))
-
+        
+            usr_cfg = email_defaults.copy() 
+            usr_cfg.update(dict(config.items('welcome_email')))
             welcome_email = message.TemplateMessage(email=email, username=username, fullname=fullname, project=project, **usr_cfg)
+            
+            pwd_cfg = email_defaults.copy() 
+            pwd_cfg.update(dict(config.items('password_email')))
             password_email = message.TemplateMessage(email=email, fullname=fullname, setpass_token_url=password_url, **pwd_cfg)
+            
             try:
                 welcome_email.send()
                 password_email.send()
@@ -200,6 +203,7 @@ if __name__ == "__main__":
     auth_file = config.get("excelsheet", "auth_file")
     worksheet_key = config.get("excelsheet", "worksheet_key")
     quotas = dict(config.items('quotas'))
+    email_defaults = dict(config.items('email_defaults'))
     
     sheet = spreadsheet.Spreadsheet(auth_file, worksheet_key)
     rows = sheet.get_all_rows("Form Responses 1")
@@ -238,7 +242,8 @@ if __name__ == "__main__":
                 failed_create.append(user)
 
     if subscribe_emails:
-        list_cfg = dict(config.items('listserv'))
+        list_cfg = email_defaults.copy() 
+        list_cfg.update(dict(config.items('listserv')))
         listserv = message.ListservMessage(subscribe_emails, **list_cfg)
         listserv.send()
 
