@@ -111,7 +111,8 @@ class Openstack:
         project_quotas = self.quotas.modify_quotas(ks_project.id, **quotas)
 
         # FIXME: don't load config every time
-        project_email_cfg = dict(config.items('new_project_email'))
+        project_email_cfg = email_defaults.copy() 
+        project_email_cfg.update(dict(config.items('new_project_email')))
 
         project_email = message.TemplateMessage(email=project.contact_email,
                                                 fullname=project.contact_name,
