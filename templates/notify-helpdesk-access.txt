@@ -1,0 +1,10 @@
+
+[<USER_NAME>]
+ 
+CSR Type: [<CSR_TYPE>]
+Priority: [<PRIORITY>]
+Queue: [<QUEUE>]
+  
+User Full Name: <FIRST_NAME> <LAST_NAME>
+
+<COMMENT>

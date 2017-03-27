@@ -47,40 +47,51 @@ def parse_rows(rows):
     Expects 'rows' to include all rows, with row 0 being the header row
     Returns a dictionary of projects/quotas.
     """
-    # NOTE: entry[16] is a required field in the Google Form, so it is safe
-    # to assume entry[0:15] exists.
+    # NOTE: entry[17] is a required field in the Google Form, so it is safe
+    # to assume entry[0:16] exists.
 
     project_list = []
     for idx, entry in enumerate(rows):
         # ignore row 0 (the header row) and blank rows
         if (idx == 0) or (entry == []):
             continue
+        # skip rows that have not been through approval/notification
+        elif (entry[0] != 'approved') or (entry[1] == ''):
+            # entry[0] is Approved
+            # entry[1] is Helpdesk Notified
+            continue
         else:
             project = dict()
-            project['user_fullname'] = entry[1]
-            # entry[2] is organization
-            # entry[3] is Openstack username (deprecated)
-            project['name'] = entry[4]
-            # entry[5] is Type of Increase
-            # entry[6] is End Date
-            # entry[7] is the Comments from the Temporary page (deprecated)
-            quotas = {'instances': entry[8],
-                      'cores': entry[9],
-                      # form requests RAM amount in GB so the users don't
-                      # get confused over multiplying by 1000 vs 1024
-                      'ram': entry[10] * 1024,
-                      'floatingip': entry[11],
-                      'volumes': entry[12],
-                      'snapshots': entry[13],
-                      'gigabytes': entry[14]}
+            # entry [2] is Timestamp
+            project['email'] = entry[3].replace(u'\xa0', ' ').strip()
+            project['user_fullname'] = entry[4] + ' ' + entry[5]
+            # entry[6] is organization
+            project['name'] = entry[7]
+            # entry[8] is Type of Increase
+            # entry[9] is End Date
+            quotas = {'instances': entry[10],
+                      'cores': entry[11],
+                      'ram': entry[12],
+                      'floatingip': entry[13],
+                      'volumes': entry[14],
+                      'snapshots': entry[15],
+                      'gigabytes': entry[16]}
             
             unchanged_quotas = [q for q in quotas if quotas[q] == '']
             for quota_name in unchanged_quotas:
                     del quotas[quota_name]
+
+            for quota_name, value in quotas.iteritems():
+                quotas[quota_name] = int(value)
+
+            # OpenStack wants the RAM quota in MB, but the form requests it in
+            # GB so the users aren't confused by multiplying by 1000 vs. 1024
+            if 'ram' in quotas:
+                quotas['ram'] = quotas['ram'] * 1024
+
             project['quotas'] = quotas
 
-            # entry[15] is Comments - required field
-            project['email'] = entry[16].replace(u'\xa0', ' ').strip()
+            # entry[17] is Comments - required field
             project['row'] = idx
 
             project_list.append(project)
@@ -191,9 +202,13 @@ if __name__ == "__main__":
         roles = keystone.role_assignments.list(project=ks_project.id)
         for role in roles:
             user = keystone.users.get(role.user['id'])
-            if user.email != project['email']:
-                quota_cfg['cc_list'] = ", ".join([quota_cfg['cc_list'],
-                                                  user.email])
+            try:
+                if user.email != project['email']:
+                    quota_cfg['cc_list'] = ", ".join([quota_cfg['cc_list'],
+                                                      user.email])
+            except AttributeError:
+                # some service users etc. might not have an email
+                pass
 
         quota_list = build_quota_table(old_quotas, project['quotas'])
         msg = TemplateMessage(email=project['email'],
