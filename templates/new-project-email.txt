@@ -1,13 +1,11 @@
 Hi <FULLNAME>,
 
-A user account has been created for you on MOC Production (Kaizen).  Your username is "<USERNAME>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly.
+A new OpenStack project has been created for you on MOC Production (Kaizen).  You can log in at:
+<LOGIN_URL>.  
 
-Once your password is set, you can log in at:
-<LOGIN_URL>
+If you also requested a new user account, you will receive the details in a separate email.
 
-You have been added to the OpenStack project: <PROJECT>.
-
-Make sure to review the following page outlining our terms, expectations, and default project settings.  Please pay particular attention to the security expectations.  Note that any VM that appears to be compromised will be shut down without warning. 
+Make sure to review the following page outlining our terms, expectations, and default project quotas.  Please pay particular attention to the security expectations.  Note that any VM that appears to be compromised will be shut down without warning. 
 <TERMS_URL>
 
 We also suggest you take the following steps to prevent lost data / wasted work:
