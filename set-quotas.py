@@ -29,6 +29,7 @@ from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
 from config import set_config_file
+from moc_utils import get_absolute_path
 from quotas import QuotaManager
 from message import TemplateMessage
 import spreadsheet
@@ -56,7 +57,7 @@ def parse_rows(rows):
         if (idx == 0) or (entry == []):
             continue
         # skip rows that have not been through approval/notification
-        elif (entry[0] != 'approved') or (entry[1] == ''):
+        elif (entry[0].lower().strip() != 'approved') or (entry[1] == ''):
             # entry[0] is Approved
             # entry[1] is Helpdesk Notified
             continue
@@ -155,7 +156,7 @@ if __name__ == "__main__":
     admin_project = config.get('auth', 'admin_project')
     auth_url = config.get('auth', 'auth_url')
     nova_version = config.get('nova', 'version')
-    quota_auth_file = config.get('quota_sheet', 'auth_file')
+    quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
     quota_worksheet_key = config.get('quota_sheet', 'worksheet_key')
     quota_template = config.get('quota_email', 'template')
 
@@ -176,7 +177,11 @@ if __name__ == "__main__":
     rows = sheet.get_all_rows("Form Responses 1")
     project_list = parse_rows(rows)
     bad_rows = []
-    
+   
+    if not project_list:
+        # FIXME: make a better exception for this later
+        raise Exception('No approved quota requests found.')
+ 
     # NOTE: 'project' is the project data from Google Sheets
     # and 'ks_project' is the matching project resource from Keystone
     for project in project_list:

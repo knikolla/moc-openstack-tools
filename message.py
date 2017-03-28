@@ -16,6 +16,7 @@ import os
 import string
 import smtplib
 from email.mime.text import MIMEText
+from moc_utils import get_absolute_path
 
 
 class BadEmailRecipient(Exception):
@@ -44,6 +45,7 @@ class Message(object):
         Assumes that the template placeholders are uppercased argument
         keywords enclosed by `<>`.
         """
+        template = get_absolute_path(template)
         with open(template, "r") as f:
             msg = f.read()
         for key in kwargs:
@@ -65,7 +67,7 @@ class Message(object):
         email_parts = self.receiver.split('@')
         out_file = "{0}_{1}.txt".format(email_parts[0], label)
         
-        file_path = os.path.join(target_path, out_file)
+        file_path = get_absolute_path(os.path.join(target_path, out_file))
         
         with open(file_path, 'w') as f:
             f.write(self.body)
