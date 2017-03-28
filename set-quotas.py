@@ -73,9 +73,11 @@ def parse_rows(rows):
                       'cores': entry[11],
                       'ram': entry[12],
                       'floatingip': entry[13],
-                      'volumes': entry[14],
-                      'snapshots': entry[15],
-                      'gigabytes': entry[16]}
+                      'network': entry[14],
+                      'port': entry[15],
+                      'volumes': entry[16],
+                      'snapshots': entry[17],
+                      'gigabytes': entry[18]}
             
             unchanged_quotas = [q for q in quotas if quotas[q] == '']
             for quota_name in unchanged_quotas:
@@ -91,7 +93,7 @@ def parse_rows(rows):
 
             project['quotas'] = quotas
 
-            # entry[17] is Comments - required field
+            # entry[19] is Comments - required field
             project['row'] = idx
 
             project_list.append(project)
