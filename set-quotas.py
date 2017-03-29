@@ -177,10 +177,12 @@ if __name__ == "__main__":
     rows = sheet.get_all_rows("Form Responses 1")
     project_list = parse_rows(rows)
     bad_rows = []
-   
+    copy_index = []
+
     if not project_list:
         # FIXME: make a better exception for this later
         raise Exception('No approved quota requests found.')
+
  
     # NOTE: 'project' is the project data from Google Sheets
     # and 'ks_project' is the matching project resource from Keystone
@@ -224,9 +226,18 @@ if __name__ == "__main__":
                               quota_list=quota_list,
                               **quota_cfg)
         msg.send()
+        copy_index.append(project['row'])
         print "Successfully updated quotas for project {}".format(
               ks_project.name)
 
+    # FIXME: code is duplicated from addusers.py, centralize it
+    if copy_index:
+        copy_rows = [r for r in rows if rows.index(r) in copy_index]
+        sheet.append_rows(copy_rows, target="Processed Requests")
+        result = sheet.delete_rows(copy_index, 'Form Responses 1')
+    else:
+        print "WARNING: No spreadsheet rows were copied."
+    
     if bad_rows:
         print "WARNING: The following rows were not processed: {}".format(
               bad_rows)
