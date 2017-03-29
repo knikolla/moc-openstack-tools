@@ -29,6 +29,7 @@ from datetime import datetime
 from spreadsheet import Spreadsheet
 from message import TemplateMessage
 from config import set_config_file
+from moc_utils import get_absolute_path
 
 
 def parse_user_row(cells):
@@ -218,11 +219,11 @@ if __name__ == '__main__':
     config.read(CONFIG_FILE)
     # FIXME right now it fails if full path to file is not specified
     # for auth_file, quota_auth_file, or helpdesk_template
-    auth_file = config.get('excelsheet', 'auth_file')
+    auth_file = get_absolute_path(config.get('excelsheet', 'auth_file'))
     worksheet_key = config.get('excelsheet', 'worksheet_key')
     helpdesk_email = config.get('helpdesk', 'email')
-    helpdesk_template = config.get('helpdesk', 'access_template')
-    quota_auth_file = config.get('quota_sheet', 'auth_file')
+    helpdesk_template = get_absolute_path(config.get('helpdesk', 'template'))
+    quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
     quota_worksheet_key = config.get('quota_sheet', 'worksheet_key')
  
     check_requests('access', auth_file, worksheet_key)

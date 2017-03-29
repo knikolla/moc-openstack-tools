@@ -183,7 +183,6 @@ if __name__ == "__main__":
         # FIXME: make a better exception for this later
         raise Exception('No approved quota requests found.')
 
- 
     # NOTE: 'project' is the project data from Google Sheets
     # and 'ks_project' is the matching project resource from Keystone
     for project in project_list:
