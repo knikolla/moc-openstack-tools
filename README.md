@@ -8,7 +8,9 @@ Packages:
     python-cinderclient
     google-api-python-client
 
-The script also requires a TLS-capable mail server to be running.  We have used this code with both Sendmail and Postfix.  See [below](#mail-server-config) for the Postfix config required to enable TLS.
+The script also requires a TLS-capable mail server to be running.  We have 
+used this code with both Sendmail and Postfix.  See 
+[below](#mail-server-config) for the Postfix config required to enable TLS.
 
 ## Getting the Signed Credentials from Google
 1. Goto [Google Developers Console](https://console.developers.google.com/project) and create a new project or select the existing one.

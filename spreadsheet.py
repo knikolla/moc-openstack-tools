@@ -25,7 +25,7 @@ from operator import itemgetter
 from itertools import groupby
 from oauth2client.service_account import ServiceAccountCredentials
 
-#googleapiclient
+# googleapiclient
 from googleapiclient.discovery import Resource
 from googleapiclient.errors import HttpError
 from googleapiclient.model import JsonModel
@@ -35,9 +35,9 @@ from googleapiclient.schema import Schemas
 
 class Spreadsheet(Resource):
     """ A wrapper around the Google API spreadsheet resource
-    
-    Constructs a spreadsheet API instance and creates user-friendly 
-    attributes and functions.  
+
+    Constructs a spreadsheet API instance and creates user-friendly
+    attributes and functions.
     """
     def __init__(self, keyfile, sheet_id):
         
@@ -54,28 +54,28 @@ class Spreadsheet(Resource):
         See googleapiclient.discovery.Resource for more information.
         """
         # auth
-        baseUrl='https://sheets.googleapis.com/'
-        discUrl = ( baseUrl + '$discovery/rest?version=v4')
+        baseUrl = 'https://sheets.googleapis.com/'
+        discUrl = (baseUrl + '$discovery/rest?version=v4')
         scope = ['https://spreadsheets.google.com/feeds']
-        creds = ServiceAccountCredentials.from_json_keyfile_name(key,scope)
+        creds = ServiceAccountCredentials.from_json_keyfile_name(key, scope)
         http = creds.authorize(Http())
         
         # service JSON
-        response, body  = http.request(discUrl)
+        response, body = http.request(discUrl)
         if response.status >= 400:
-            raise HttpError(response, body, uri=discUrl) 
+            raise HttpError(response, body, uri=discUrl)
         service = json.loads(body)
         
-        # model from service 
+        # model from service
         features = service.get('features', [])
         model = JsonModel('dataWrapper' in features)
         
         # schema from service
-        schema = Schemas(service)        
+        schema = Schemas(service)
         
-        return dict(http=http, baseUrl=baseUrl, model=model, 
-                developerKey=None, requestBuilder=HttpRequest, 
-                resourceDesc=service, rootDesc=service, schema=schema)
+        return dict(http=http, baseUrl=baseUrl, model=model,
+                    developerKey=None, requestBuilder=HttpRequest,
+                    resourceDesc=service, rootDesc=service, schema=schema)
     
     def _get_info(self):
         """ Get JSON metadata about the spreadsheet """
@@ -89,21 +89,21 @@ class Spreadsheet(Resource):
             'MyWorksheet!A1:E5'
         """
         request = self.spreadsheets().values().get(spreadsheetId=self._id,
-             range=cell_range)
+                                                   range=cell_range)
         rowdata = request.execute()
         return rowdata.get('values')
 
     def _batch_delete(self, worksheet_id, index_list, dimension):
-        """ Send a batch request to delete rows or columns 
+        """ Send a batch request to delete rows or columns
             worksheet_id    id of the worksheet
             index_list      a list of row or column indexes to delete
             dimension       "ROWS" or "COLUMNS"
 
         Note that row/column indexes start at 0, so A1 is [0, 0]
         
-        When changing this function, note that multiple deletes ** MUST ** 
-        be ordered from highest to lowest row number in the request body. 
-        Otherwise, each delete changes the indices for rows that are still 
+        When changing this function, note that multiple deletes ** MUST **
+        be ordered from highest to lowest row number in the request body.
+        Otherwise, each delete changes the indices for rows that are still
         queued for deletion by the old index, and the wrong data is deleted.
         """
         
@@ -115,15 +115,15 @@ class Spreadsheet(Resource):
         # build the request body
         requests = []
         for x in delete_list:
-            req_range = dict(sheetId=worksheet_id, 
-                             dimension=dimension, 
-                             startIndex=x[0], 
+            req_range = dict(sheetId=worksheet_id,
+                             dimension=dimension,
+                             startIndex=x[0],
                              endIndex=x[1])
-            requests.append( { "deleteDimension": { "range": req_range } } )
-        body = { "requests": requests }
+            requests.append({"deleteDimension": {"range": req_range}})
+        body = {"requests": requests}
 
         http_req = self.spreadsheets().batchUpdate(spreadsheetId=self._id,
-                                           body=body)
+                                                   body=body)
         return http_req.execute()
 
     def _group_index(self, index_list):
@@ -141,31 +141,29 @@ class Spreadsheet(Resource):
         index_list.sort()
 
         # Find start/end index for each row or sequence of rows in the list
-        for key, group in groupby(enumerate(index_list), lambda (i,x):i-x):
-             grp = map(itemgetter(1), group)
+        for key, group in groupby(enumerate(index_list), lambda (i, x): i - x):
+                grp = map(itemgetter(1), group)
              
-             # Increment grp[-1] because the end index row is not deleted
-             # so [start, end] = [5, 6] deletes row 5
-             range_list.append([grp[0], grp[-1]+1])
+                # Increment grp[-1] because the end index row is not deleted
+                # so [start, end] = [5, 6] deletes row 5
+                range_list.append([grp[0], grp[-1] + 1])
         
         return range_list
     
     def get_worksheet_id(self, name):
         """ Get the ID of the specified worksheet """
         info = self._get_info()
-        match = (sheet['properties'] for sheet in info['sheets'] 
-                if sheet['properties']['title'] == name).next()
+        match = (sheet['properties'] for sheet in info['sheets']
+                 if sheet['properties']['title'] == name).next()
         if match is None:
             raise Exception('Worksheet not found: {}'.format(name))
         else:
             return match.get('sheetId')
      
-
     def get_all_rows(self, worksheet):
         """ Get all rows from the specified worksheet """
         cell_range = worksheet + "!A:Z"
         return self._get_rows(cell_range)
-
 
     def delete_rows(self, row_list, worksheet):
         """ Delete the given rows from the specified worksheet. """
@@ -173,7 +171,7 @@ class Spreadsheet(Resource):
         return self._batch_delete(worksheet_id, row_list, "ROWS")
     
     def append_rows(self, rows, target, first_table_cell="A1"):
-        """ Append rows to the specified target worksheet 
+        """ Append rows to the specified target worksheet
         
         first_table_cell specifies where the top left corner of the table
         we are appending to is found.
@@ -183,9 +181,8 @@ class Spreadsheet(Resource):
         append to happen in the wrong place.
         """
         cell_range = target + "!" + first_table_cell
-        body = { "values": rows }
-        req = self.spreadsheets().values().append(spreadsheetId=self._id, 
-                range=cell_range, valueInputOption='RAW', 
-                insertDataOption='INSERT_ROWS', body=body)        
+        body = {"values": rows}
+        req = self.spreadsheets().values().append(
+            spreadsheetId=self._id, range=cell_range, valueInputOption='RAW',
+            insertDataOption='INSERT_ROWS', body=body)
         return req.execute()
-
