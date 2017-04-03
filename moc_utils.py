@@ -23,3 +23,27 @@ def get_absolute_path(file_path):
         return abs_path
     else:
         return file_path
+
+
+def select_rows(match_value, col_index, all_rows, header=True):
+    """Select only rows where the value in the search column matches
+ 
+    This allows the caller to process requests from one user or project at a
+    time if needed, for example when processing individual helpdesk tickets.
+    inputs:
+        match_value    the value to search for
+        col_index      the column index to search
+        all_rows       a list of rows.  A row is a list of cell values, so
+                       all_rows should have the format:
+                           [ [head0, head1], [val0, val1], [val2, val3]]
+        header         Whether all_rows[0] contains column headers.
+                       Default: True
+    """
+    select_rows = [row for row in all_rows
+                   if row[col_index].lower() == match_value.lower()]
+    if not select_rows:
+        raise ValueError('No match found for `{}`'.format(match_value))
+    # put the header row back
+    if header:
+        select_rows.insert(0, all_rows[0])
+    return select_rows

@@ -29,7 +29,7 @@ from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
 from config import set_config_file
-from moc_utils import get_absolute_path
+from moc_utils import get_absolute_path, select_rows
 from quotas import QuotaManager
 from message import TemplateMessage
 import spreadsheet
@@ -140,6 +140,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=help_description)
     parser.add_argument('-c', '--config',
                         help='Specify configuration file.')
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--project',
+                      help='Process requests from a single project.')
+    # The value of all_reqs is never used, its purpose is to require the caller
+    # to explicitly declare that they wish to process all rows
+    mode.add_argument('--all', dest='all_reqs', action='store_true',
+                      help='Process all available requests.')
 
     args = parser.parse_args()
    
@@ -175,6 +182,17 @@ if __name__ == "__main__":
     # get data from Google Sheet
     sheet = spreadsheet.Spreadsheet(quota_auth_file, quota_worksheet_key)
     rows = sheet.get_all_rows("Form Responses 1")
+    if args.project:
+        try:
+            rows = select_rows(args.project, 7, rows)
+            if len(rows) > 2:
+                print ("WARNING: Multiple requests found for project {}."
+                       "Only the first request will be processed.  To process "
+                       "additional requests, run the script again with the "
+                       "same arguments.").format(args.project)
+        except ValueError as ve:
+            raise argparse.ArgumentError(None, ve.message)
+
     project_list = parse_rows(rows)
     bad_rows = []
     copy_index = []

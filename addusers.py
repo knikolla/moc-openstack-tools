@@ -42,7 +42,7 @@ from keystoneauth1 import session
 # local
 import message
 import spreadsheet
-from moc_utils import get_absolute_path
+from moc_utils import get_absolute_path, select_rows
 from quotas import QuotaManager
 from setpass import SetpassClient, random_password
 from config import set_config_file
@@ -330,9 +330,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=help_description)
     parser.add_argument('-c', '--config',
                         help='Specify configuration file.')
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--user',
+                      help='Process requests for a single user.')
+    # The value of all_reqs is never used, its purpose is to require the caller
+    # to explicitly declare that they wish to process all rows
+    mode.add_argument('--all', dest='all_reqs', action='store_true', 
+                      help='Process all available requests.')
 
     args = parser.parse_args()
-   
+
     CONFIG_FILE = set_config_file(args.config)
 
     config = ConfigParser.ConfigParser()
@@ -363,6 +370,18 @@ if __name__ == "__main__":
     
     sheet = spreadsheet.Spreadsheet(auth_file, worksheet_key)
     rows = sheet.get_all_rows("Form Responses 1")
+
+    if args.user:
+       try: 
+            rows = select_rows(args.user, 3, rows)
+            if len(rows) > 2:
+                print ("WARNING: Multiple requests found for user {}."
+                       "Only the first request will be processed.  To process "
+                       "additional requests, run the script again with the "
+                       "same arguments.").format(args.user)
+       except ValueError as ve:
+            raise argparse.ArgumentError(None, ve.message)
+
     content, bad_rows = parse_rows(rows)
     
     copy_index = []
