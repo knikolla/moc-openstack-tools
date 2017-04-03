@@ -335,7 +335,7 @@ if __name__ == "__main__":
                       help='Process requests for a single user.')
     # The value of all_reqs is never used, its purpose is to require the caller
     # to explicitly declare that they wish to process all rows
-    mode.add_argument('--all', dest='all_reqs', action='store_true', 
+    mode.add_argument('--all', dest='all_reqs', action='store_true',
                       help='Process all available requests.')
 
     args = parser.parse_args()
@@ -372,14 +372,14 @@ if __name__ == "__main__":
     rows = sheet.get_all_rows("Form Responses 1")
 
     if args.user:
-       try: 
+        try:
             rows = select_rows(args.user, 3, rows)
             if len(rows) > 2:
                 print ("WARNING: Multiple requests found for user {}."
                        "Only the first request will be processed.  To process "
                        "additional requests, run the script again with the "
                        "same arguments.").format(args.user)
-       except ValueError as ve:
+        except ValueError as ve:
             raise argparse.ArgumentError(None, ve.message)
 
     content, bad_rows = parse_rows(rows)
