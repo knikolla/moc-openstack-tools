@@ -27,12 +27,11 @@ Once all users have been processed, the script will:
     - Print information about any users skipped due to missing/invalid data
 
 For more information on the Setpass service see:
-https://github.com/CCI-MOC/setpass 
+https://github.com/CCI-MOC/setpass
 
 Usage:
     python addusers.py
 """
-import json
 import re
 import ConfigParser
 import argparse
@@ -40,7 +39,7 @@ from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
-#local
+# local
 import message
 import spreadsheet
 from moc_utils import get_absolute_path
@@ -52,18 +51,21 @@ from config import set_config_file
 class InvalidEmailError(Exception):
     """User's email address does not pass basic format validation"""
 
+
 class ItemExistsError(Exception):
     """Keystone resource already exists and cannot be created"""
     def __init__(self, item_type, item_name):
         msg = "{} exists with the name: {}".format(item_type, item_name)
         super(ItemExistsError, self).__init__(msg)
 
+
 class ItemNotFoundError(Exception):
     """The specified Keystone resource was not found"""
     def __init__(self, item_type, item_name):
-        msg = "No {} found in Keystone with name: {}".format(item_type, 
+        msg = "No {} found in Keystone with name: {}".format(item_type,
                                                              item_name)
         super(ItemNotFoundError, self).__init__(msg)
+
 
 class User(object):
     """Class for storing user data from the Google Form.
@@ -71,7 +73,8 @@ class User(object):
     Data from this class will be used to identify an existing OpenStack user
     or create a new one.
     """
-    def __init__(self, row, user_name, email=None, first_name=None, last_name=None, is_new=False, is_requestor=True, **kwargs):
+    def __init__(self, row, user_name, email=None, first_name=None,
+                 last_name=None, is_new=False, is_requestor=True, **kwargs):
         self.name = user_name
         self.first_name = first_name
         self.last_name = last_name
@@ -80,14 +83,16 @@ class User(object):
         self.is_new = is_new
         self.is_requestor = is_requestor
         self.__dict__.update(kwargs)
-        
+       
+ 
 class Project(object):
     """Class for storing project data from the Google Form.
     
     Data from this class will be used to identify an existing OpenStack project
     or create a new one.
     """
-    def __init__(self, row, name, contact_name, contact_email, is_new=False, **kwargs):
+    def __init__(self, row, name, contact_name, contact_email, is_new=False,
+                 **kwargs):
         self.name = name
         self.contact_name = contact_name
         self.contact_email = contact_email
@@ -96,23 +101,26 @@ class Project(object):
         self.users = []
         self.__dict__.update(kwargs)
 
+
 class Openstack:
     def __init__(self, session, nova_version, setpass_url):
         self.keystone = client.Client(session=session)
-        self.setpass = SetpassClient(session, setpass_url) 
+        self.setpass = SetpassClient(session, setpass_url)
         self.quotas = QuotaManager(session, nova_version)
  
     def create_project(self, project, quotas):
         print "Creating project: {}".format(project.name)
-        ks_project = self.keystone.projects.create(name=project.name,
-                                                   domain='default',
-                                                   description=project.description,
-                                                   enabled=True)
+        ks_project = self.keystone.projects.create(
+            name=project.name, domain='default',
+            description=project.description,
+            enabled=True)
         
-        project_quotas = self.quotas.modify_quotas(ks_project.id, **quotas)
+        # this is unused for now. use project_quotas in the email later
+        project_quotas = self.quotas.modify_quotas(ks_project.id,  # noqa: F841
+                                                   **quotas)
 
         # FIXME: don't load config every time
-        project_email_cfg = email_defaults.copy() 
+        project_email_cfg = email_defaults.copy()
         project_email_cfg.update(dict(config.items('new_project_email')))
 
         project_email = message.TemplateMessage(email=project.contact_email,
@@ -131,10 +139,10 @@ class Openstack:
 
     def create_user(self, user, project):
         """Create a new OpenStack user from an addusers.User
-
-        This function assumes that you have already verfied the user doesn't exist.
+        
+        This function assumes you have already verfied the user doesn't exist.
         """
-        print "Creating user {}".format(user.name) 
+        print "Creating user {}".format(user.name)
         password = random_password(16)
         fullname = "{} {}".format(user.first_name, user.last_name)
         ks_user = self.keystone.users.create(name=user.name,
@@ -143,21 +151,25 @@ class Openstack:
                                              domain='default',
                                              description=fullname)
         
-        # FIXME: we shouldn't load the config every time. Consider this in future improvements
-        # to config file loading 
         setpass_token = self.setpass.get_token(ks_user.id, password, user.pin)
         password_url = self.setpass.get_url(setpass_token)
 
-        usr_cfg = email_defaults.copy() 
+        usr_cfg = email_defaults.copy()
         usr_cfg.update(dict(config.items('welcome_email')))
-        welcome_email = message.TemplateMessage(email=ks_user.email, username=ks_user.name, fullname=fullname, project=project.name, **usr_cfg)
-        pwd_cfg = email_defaults.copy() 
+        welcome_email = message.TemplateMessage(email=ks_user.email,
+                                                username=ks_user.name,
+                                                fullname=fullname,
+                                                project=project.name,
+                                                **usr_cfg)
+        pwd_cfg = email_defaults.copy()
         pwd_cfg.update(dict(config.items('password_email')))
-        password_email = message.TemplateMessage(email=ks_user.email, fullname=fullname, setpass_token_url=password_url, **pwd_cfg)
+        password_email = message.TemplateMessage(
+            email=ks_user.email, fullname=fullname,
+            setpass_token_url=password_url, **pwd_cfg)
         
         try:
-           welcome_email.send()
-           password_email.send()
+            welcome_email.send()
+            password_email.send()
         except:
             # Save both emails if either throws an error, just in case
             path = config.get('output', 'email_path')
@@ -169,17 +181,19 @@ class Openstack:
 
     def grant_role(self, auth_url, project_id, user_id, role_id):
         """Grants the user the specified role on the project."""
-        url = '{}/projects/{}/users/{}/roles/{}'.format(auth_url, project_id, user_id, role_id)
+        url = '{}/projects/{}/users/{}/roles/{}'.format(auth_url,
+                                                        project_id,
+                                                        user_id, role_id)
         return self.keystone.session.put(url)
 
 
-# NOTE: This function is not currently used, but keep it for the future when we move away from Google Forms.
+# NOTE: This function is not currently used,
+# but keep it for the future when we move away from Google Forms.
 # It should be moved to a utilities module.
 def validate_email(uname):
     """Check that the email address provided matches a few simple rules
-
     The email address should have no whitespace, exactly 1 '@' symbol, and
-    at least one '.' following the @ symbol. 
+    at least one '.' following the @ symbol.
     """
     pattern = re.compile('[^@\s]+@[^@\s]+\.[^@\s]+')
     if pattern.match(uname):
@@ -189,37 +203,39 @@ def validate_email(uname):
 
 
 def exists_in_keystone(check_thing, keystone_things):
-    """Check that the new user or project name doesn't conflict with an existing project.
+    """Check for user or project name conflicts.
 
-    new_thing should be an addusers.User or addusers.Project 
+    new_thing should be an addusers.User or addusers.Project
     keystone_things should be a list of Keystone user or project resources
     """
-    matches = (thing for thing in keystone_things if thing.name.lower() == check_thing.name.lower())
+    matches = (thing for thing in keystone_things if thing.name.lower() ==
+               check_thing.name.lower())
 
     try:
         return matches.next()
     except StopIteration:
-       return None
+        return None
 
 
 def parse_rows(rows):
-    """Parse new user/project data from the spreadsheet into User and Project classes.
+    """Parse spreadsheet user/project data into User and Project classes
     
     Expects 'rows' to include all rows, with row 0 being the header row
-    Returns a dictionary of projects keyed by project name, and a list of rows that were not blank but failed
-    to parse correctly.
-    """    
+    Returns a dictionary of projects keyed by project name, and a list
+    of rows that were not blank but failed to parse correctly.
+    """
     projects = {}
     bad_rows = []
     for idx, entry in enumerate(rows):
-        #ignore row 0 (the header row) and blank rows
+        # ignore row 0 (the header row) and blank rows
         if (idx == 0) or (entry == []):
             continue
         elif (entry[0].lower().strip() != 'approved') or (entry[1] == ''):
-            # Don't process requests that haven't gone through the 
+            # Don't process requests that haven't gone through the
             # approval/notification process yet
             # entry[0] is Approved, entry[1] is Helpdesk Notified
-            bad_rows.append((idx, "Approval/Notification Incomplete: {}".format(entry[3])))
+            bad_rows.append((idx, ("Approval/Notification "
+                                   "Incomplete: {}").format(entry[3])))
             continue
         try:
             # entry[2] is Timestamp
@@ -236,9 +252,9 @@ def parse_rows(rows):
                                   'phone': entry[9],
                                   'sponsor': entry[10],
                                   'pin': entry[11],
-                                  # entry[12] asks whether a new or existing 
+                                  # entry[12] asks whether a new or existing
                                   # project = only used for form navigation
-                                  # FIXME: add option to choose "no project" 
+                                  # FIXME: add option to choose "no project"
                                   # for teams who sign up for a new project
                                   # together?
                                   'comment': entry[13]})
@@ -249,44 +265,46 @@ def parse_rows(rows):
                 # the user chose to join an existing project
                 # info in entry[17] to entry[19]
                 project_name = entry[17]
-                if project_name not in projects: 
+                if project_name not in projects:
                     project = Project(row=idx,
                                       name=project_name,
                                       contact_name=entry[18],
                                       contact_email=entry[19])
-                    projects[project.name] = project 
+                    projects[project.name] = project
                  
-                projects[project_name].users.append(user) 
-
+                projects[project_name].users.append(user)
+            
             elif entry[14] in projects:
-                   # FIXME: 
-                   # This should probably raise an error of some sort.  It
-                   # covers 2 weird edge cases, either:
-                   #   a) the project exists, another user from this batch
-                   #      asked to be added to it
-                   #   b) project doesn't exist, but another user from this
-                   #      batch requested a new project with this name.
-                   # For now, while we get stuff working, just assume they are
-                   # the same project.
-                   projects[entry[14]].users.append(user)
+                # FIXME:
+                # This should probably raise an error of some sort.  It
+                # covers 2 weird edge cases, either:
+                #   a) the project exists, another user from this batch
+                #      asked to be added to it
+                #   b) project doesn't exist, but another user from this
+                #      batch requested a new project with this name.
+                # For now, while we get stuff working, just assume they are
+                # the same project.
+                projects[entry[14]].users.append(user)
 
             else:
                 # a new project was requested - info in entry[14] to entry[16]
-                project = Project(row=idx,
-                                  name=entry[14],
-                                  contact_name=user.first_name + " " + user.last_name,
-                                  contact_email=user.email,
-                                  description = entry[15],
-                                  is_new = True) 
+                project = Project(
+                    row=idx, name=entry[14],
+                    contact_name=user.first_name + " " + user.last_name,
+                    contact_email=user.email,
+                    description=entry[15],
+                    is_new=True)
                 project.users.append(user)
-            
+
                 try:
                     for add_user in entry[16].split(','):
                         add_user = add_user.strip()
-                        existing_user = User(row=idx, user_name=add_user, email=add_user, is_requestor=False)
+                        existing_user = User(row=idx, user_name=add_user,
+                                             email=add_user,
+                                             is_requestor=False)
                         project.users.append(existing_user)
                 except IndexError:
-                    # entry[16] is the last possible filled cell in a new 
+                    # entry[16] is the last possible filled cell in a new
                     # project entry, so if it was left blank it's not there
                     # FIXME by changing field order on the forms?
                     pass
@@ -296,22 +314,21 @@ def parse_rows(rows):
                     print ("WARNING: unable to add users for project {} from "
                            "input: {}.\nIf this is a valid request, add these "
                            "users manually.").format(entry[14], entry[16])
-                    add_users = []
 
-                projects[project.name] = project 
+                projects[project.name] = project
         except IndexError:
             # Somehow a required field is blank
             bad_rows.append((idx, "Missing Required Field"))
            
-    return projects, bad_rows 
+    return projects, bad_rows
 
 
 if __name__ == "__main__":
     
-    help_description = ("Add new users and projects to OpenStack using " 
+    help_description = ("Add new users and projects to OpenStack using "
                         "data from Google Sheets.")
     parser = argparse.ArgumentParser(description=help_description)
-    parser.add_argument('-c', '--config', 
+    parser.add_argument('-c', '--config',
                         help='Specify configuration file.')
 
     args = parser.parse_args()
@@ -330,14 +347,16 @@ if __name__ == "__main__":
     setpass_url = config.get('setpass', 'setpass_url')
     auth = v3.Password(auth_url=auth_url,
                        username=admin_user,
-                       user_domain_id = 'default',
+                       user_domain_id='default',
                        password=admin_pwd,
-                       project_domain_id = 'default',
-                       project_name = admin_project)
+                       project_domain_id='default',
+                       project_name=admin_project)
     session = session.Session(auth=auth)
     
-    openstack = Openstack(session=session, nova_version=nova_version, setpass_url=setpass_url)
-    auth_file = get_absolute_path(config.get("excelsheet", "auth_file"))
+    openstack = Openstack(session=session, nova_version=nova_version,
+                          setpass_url=setpass_url)
+    auth_file = get_absolute_path(config.get("excelsheet",
+                                             "auth_file"))
     worksheet_key = config.get("excelsheet", "worksheet_key")
     quotas = dict(config.items('quotas'))
     email_defaults = dict(config.items('email_defaults'))
@@ -348,16 +367,16 @@ if __name__ == "__main__":
     
     copy_index = []
     subscribe_emails = []
-    
-    # Get these once at the beginning and update them as we add users and 
+
+    # Get these once at the beginning and update them as we add users and
     # projects with the script
     ks_users = openstack.keystone.users.list()
-    ks_projects = openstack.keystone.projects.list()    
+    ks_projects = openstack.keystone.projects.list()
     ks_member_role = openstack.keystone.roles.find(name='_member_')
     
     if not content:
         # FIXME: make a better exception
-        raise Exception('No approved requests found.') 
+        raise Exception('No approved requests found.')
 
     for project in content:
         # what we get back here is a keystone project, or None
@@ -366,12 +385,15 @@ if __name__ == "__main__":
             if content[project].is_new:
                     if ks_project:
                         raise ItemExistsError('Project', content[project].name)
-                    ks_project = openstack.create_project(content[project], quotas)
+                    ks_project = openstack.create_project(content[project],
+                                                          quotas)
             elif not ks_project:
-                # this could happen if we delete a project or change its name but forget to update the form
+                # this could happen if we delete a project or change its name
+                # but forget to update the form
                 raise ItemNotFoundError('Project', content[project].name)
         except ItemExistsError:
-            print "skipping existing project marked as new: {}".format(content[project].name)
+            print ("skipping existing project marked "
+                   "as new: {}").format(content[project].name)
             continue
             # FIXME: Actually handle this, it should just skip this project
             # and do error reporting.  Need to consider whether to create
@@ -380,7 +402,8 @@ if __name__ == "__main__":
             # chose a project name that is already in use.  Can we do that?
         except ItemNotFoundError:
             # FIXME: Ditto to above, actually handle this
-            print "skipping over not-found project {}".format(content[project].name)
+            print ("skipping over not-found project "
+                   "{}").format(content[project].name)
             continue
               
         # email id is used as username as well.....
@@ -388,12 +411,13 @@ if __name__ == "__main__":
             ks_user = exists_in_keystone(user, ks_users)
             try:
                 if user.is_new:
-                   if ks_user:
-                       raise ItemExistsError('User', user.name)
-                   new_ks_user = openstack.create_user(user, ks_project)
-                   openstack.grant_role(auth_url, ks_project.id, new_ks_user.id, ks_member_role.id)
-                   ks_users.append(new_ks_user)
-                   subscribe_emails.append(user.email)                
+                    if ks_user:
+                        raise ItemExistsError('User', user.name)
+                    new_ks_user = openstack.create_user(user, ks_project)
+                    openstack.grant_role(auth_url, ks_project.id,
+                                         new_ks_user.id, ks_member_role.id)
+                    ks_users.append(new_ks_user)
+                    subscribe_emails.append(user.email)
                 elif not ks_user:
                     if user.is_requestor:
                         raise ItemNotFoundError('User', user.name)
@@ -402,14 +426,17 @@ if __name__ == "__main__":
                         print ("WARNING: Additional user {} does not exist. "
                                "User will not be added to project {}."
                                "Obtain the correct username and add the user"
-                               "manually.").format(user.name, 
+                               "manually.").format(user.name,
                                                    ks_project.name)
                 
                 else:
-                    print "Adding existing user {} to project {}".format(ks_user.name, ks_project.name)
-                    response = openstack.grant_role(auth_url, ks_project.id, ks_user.id, ks_member_role.id)
+                    print ("Adding existing user {} to "
+                           "project {}").format(ks_user.name, ks_project.name)
+                    response = openstack.grant_role(auth_url, ks_project.id,
+                                                    ks_user.id,
+                                                    ks_member_role.id)
                 
-                if user.is_requestor: 
+                if user.is_requestor:
                     copy_index.append(user.row)
                 
             except message.BadEmailRecipient as err:
@@ -417,53 +444,52 @@ if __name__ == "__main__":
                 # otherwise treat this as a failure
                 print err.message
                 print "sendmail reports: \n {0}".format(err.rejected)
-            except (ItemExistsError, InvalidEmailError, ItemNotFoundError) as e:
+            except (ItemExistsError,
+                    InvalidEmailError, ItemNotFoundError) as e:
                 bad_rows.append((user.row, e.message))
                     
-
     if subscribe_emails:
-        list_cfg = email_defaults.copy() 
+        list_cfg = email_defaults.copy()
         list_cfg.update(dict(config.items('listserv')))
         listserv = message.ListservMessage(subscribe_emails, **list_cfg)
         listserv.send()
 
     # Copy and delete only the successful rows
     if copy_index:
-        copy_rows = [r for r in rows if rows.index(r) in copy_index] 
+        copy_rows = [r for r in rows if rows.index(r) in copy_index]
         sheet.append_rows(copy_rows, target="Current Users")
         result = sheet.delete_rows(copy_index, 'Form Responses 1')
     else:
         print "WARNING: No spreadsheet rows were copied."
     
     # In the web GUI, row 0 is numbered 1
-    #GUI_rows = [(x+1) for x in bad_rows]
-    #print ("WARNING: {count} rows ignored due to missing approval/notification: " +
-    #      "{rowlist}\n").format(count=len(bad_rows), rowlist=GUI_rows)
+    # GUI_rows = [(x+1) for x in bad_rows]
+    # print ("WARNING: {count} rows ignored due to missing " +
+    #      "approval/notification: {rowlist}\n").format(count=len(bad_rows),
+    #                                                   rowlist=GUI_rows)
  
     if bad_rows:
-        ERROR_FORMAT="{row:>16}    {error}"
+        ERROR_FORMAT = "{row:>16}    {error}"
         print "The following rows were not fully processed due to errors:"
         print ERROR_FORMAT.format(row="ROW", error="ERROR")
         print ERROR_FORMAT.format(row="-----", error="-----")
         for (row, error_msg) in bad_rows:
             # In the Google Sheets web GUI, row 0 is numbered 1
             print ERROR_FORMAT.format(row=(row + 1), error=error_msg)
-        
     
     '''
-    #TODO: move this code to a 'manual input' function triggered by an option flag
+    # TODO: move this code to a 'manual input' function
+    # triggered by an option flag
     proj_name = raw_input("Enter the new project name: ")
     proj_descr = raw_input("Enter project description: ")
     username = raw_input("Enter the new username for openstack: ")
     fullname = raw_input("Enter full name: ")
     email = raw_input("Enter user's email address: ")
     user_descr = raw_input("Enter user's description: ")
-
     proj_id = openstack.create_project(proj_name, proj_descr)
-
     password = random_password(16)
-    openstack.create_user(fullname, username, password, user_descr, email, proj_id, proj_name)
-
+    openstack.create_user(fullname, username, password, user_descr, email,
+                          proj_id, proj_name)
     '''
 
     print "Done creating accounts."

@@ -45,5 +45,3 @@ If no certificate exists, one can be generated:
      
      openssl req -new -x509 -nodes -out /etc/postfix/postfix.pem -keyout /etc/postfix/postfix.pem -days 3650
 
-
-
