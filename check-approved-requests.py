@@ -79,9 +79,14 @@ def parse_quota_row(cells):
     user_info = {'user_name': email,
                  'user_email': email,
                  'first_name': cells[4],
-                 'last_name': cells[5]}
+                 'last_name': cells[5],
+                 # cells[6] is Organization
+                 'project': cells[7]}
 
-    comment = 'User requested new quotas for project: {}'.format(cells[7])
+    # cells[8] is Type of Increase (Temp/Permanent)
+    # cells[9] is End Date (for temp requests)
+
+    comment = 'New quota request for project: {}'.format(user_info['project'])
     comment += "\n\nRequest Details:\n"
     
     # FIXME: this code block is lifted straight from set-quotas.py,
@@ -114,6 +119,8 @@ def parse_quota_row(cells):
 def notify_helpdesk(template, sender, receiver, **request_info):
     """Populate and send an email to the helpdesk to open a ticket"""
     subject = 'MOC {}'.format(request_info['csr_type'])
+    if 'project' not in request_info:
+        request_info['project'] = 'N/A'
     msg = TemplateMessage(template=template, sender=sender, email=receiver,
                           subject=subject, **request_info)
     msg.send()
