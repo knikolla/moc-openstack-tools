@@ -170,6 +170,8 @@ class Openstack:
         try:
             welcome_email.send()
             password_email.send()
+            print "Link for user {} to set password:\n{}".format(user.name,
+                                                                 password_url)
         except:
             # Save both emails if either throws an error, just in case
             path = config.get('output', 'email_path')
