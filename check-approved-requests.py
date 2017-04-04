@@ -205,8 +205,6 @@ def timestamp_spreadsheet(sheet, time, rows, column):
                       }}}
         request_list.append(update_req)
     
-   # print request_list
-   # exit(0)
     batch = sheet.spreadsheets().batchUpdate(spreadsheetId=sheet._id,
                                              body={'requests': request_list})
     batch.execute()

@@ -112,6 +112,7 @@ if __name__ == "__main__":
 
     try:
         email.send()
+        print url
     except:
         email.dump_to_file(config)
         raise
