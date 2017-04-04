@@ -42,7 +42,7 @@ class ProjectNotFoundError(Exception):
         super(ProjectNotFoundError, self).__init__(message)
 
 
-def parse_rows(rows):
+def parse_rows(rows, select_project=None):
     """Parse quota update data from the spreadsheet into a dictionary
     
     Expects 'rows' to include all rows, with row 0 being the header row
@@ -50,9 +50,26 @@ def parse_rows(rows):
     """
     # NOTE: entry[17] is a required field in the Google Form, so it is safe
     # to assume entry[0:16] exists.
-
+    
+    # Column index in the Google Sheet for project name
+    # This may need to be updated if question order on the form is changed
+    PROJECT_COLUMN = 7
+    
     project_list = []
-    for idx, entry in enumerate(rows):
+
+    if select_project:
+        try:
+            rows = select_rows(select_project, PROJECT_COLUMN, rows)
+            if len(rows) > 2:
+                print ("WARNING: Multiple requests found for project {}. All "
+                       "{} requests will be processed. You may need to close "
+                       "multiple tickets.").format(args.project, len(rows))
+        except ValueError as ve:
+            raise argparse.ArgumentError(None, ve.message)
+    else:
+        rows = enumerate(rows)
+
+    for idx, entry in rows:
         # ignore row 0 (the header row) and blank rows
         if (idx == 0) or (entry == []):
             continue
@@ -182,18 +199,8 @@ if __name__ == "__main__":
     # get data from Google Sheet
     sheet = spreadsheet.Spreadsheet(quota_auth_file, quota_worksheet_key)
     rows = sheet.get_all_rows("Form Responses 1")
-    if args.project:
-        try:
-            rows = select_rows(args.project, 7, rows)
-            if len(rows) > 2:
-                print ("WARNING: Multiple requests found for project {}."
-                       "Only the first request will be processed.  To process "
-                       "additional requests, run the script again with the "
-                       "same arguments.").format(args.project)
-        except ValueError as ve:
-            raise argparse.ArgumentError(None, ve.message)
-
-    project_list = parse_rows(rows)
+    
+    project_list = parse_rows(rows, select_project=args.project)
     bad_rows = []
     copy_index = []
 

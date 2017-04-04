@@ -39,11 +39,11 @@ def select_rows(match_value, col_index, all_rows, header=True):
         header         Whether all_rows[0] contains column headers.
                        Default: True
     """
-    select_rows = [row for row in all_rows
+    select_rows = [(all_rows.index(row), row) for row in all_rows
                    if row[col_index].lower() == match_value.lower()]
     if not select_rows:
         raise ValueError('No match found for `{}`'.format(match_value))
     # put the header row back
     if header:
-        select_rows.insert(0, all_rows[0])
+        select_rows.insert(0, (0, all_rows[0]))
     return select_rows

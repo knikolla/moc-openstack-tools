@@ -217,16 +217,35 @@ def exists_in_keystone(check_thing, keystone_things):
         return None
 
 
-def parse_rows(rows):
+def parse_rows(rows, select_user=None):
     """Parse spreadsheet user/project data into User and Project classes
     
     Expects 'rows' to include all rows, with row 0 being the header row
     Returns a dictionary of projects keyed by project name, and a list
     of rows that were not blank but failed to parse correctly.
+
+    Select_user allows caller to handle requests from one user only.
     """
+    # Column index in the Google Sheet for username
+    # This may need to be updated if question order on the form is changed
+    USER_COLUMN = 3
+
     projects = {}
     bad_rows = []
-    for idx, entry in enumerate(rows):
+
+    if select_user:
+        try:
+            rows = select_rows(select_user, USER_COLUMN, rows)
+            if len(rows) > 2:
+                print ("WARNING: Multiple requests found for user {}. All {} "
+                       "requests will be processed.  You may need to close "
+                       "multiple tickets.").format(args.user, len(rows) - 1)
+        except ValueError as ve:
+            raise argparse.ArgumentError(None, ve.message)
+    else:
+        rows = enumerate(rows)
+
+    for idx, entry in rows:
         # ignore row 0 (the header row) and blank rows
         if (idx == 0) or (entry == []):
             continue
@@ -371,18 +390,7 @@ if __name__ == "__main__":
     sheet = spreadsheet.Spreadsheet(auth_file, worksheet_key)
     rows = sheet.get_all_rows("Form Responses 1")
 
-    if args.user:
-        try:
-            rows = select_rows(args.user, 3, rows)
-            if len(rows) > 2:
-                print ("WARNING: Multiple requests found for user {}."
-                       "Only the first request will be processed.  To process "
-                       "additional requests, run the script again with the "
-                       "same arguments.").format(args.user)
-        except ValueError as ve:
-            raise argparse.ArgumentError(None, ve.message)
-
-    content, bad_rows = parse_rows(rows)
+    content, bad_rows = parse_rows(rows, select_user=args.user)
     
     copy_index = []
     subscribe_emails = []
