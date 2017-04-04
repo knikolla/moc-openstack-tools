@@ -467,9 +467,11 @@ if __name__ == "__main__":
                     InvalidEmailError, ItemNotFoundError) as e:
                 bad_rows.append((user.row, e.message))
                     
-    if subscribe_emails:
-        mailman_config = dict(config.items('mailman'))
-        mailman_subscribe(subscribe_emails, mailman_config)
+    # TRAINING EDIT: Do not subscribe anyone to the mailing list
+    #
+    # if subscribe_emails:
+    #     mailman_config = dict(config.items('mailman'))
+    #     mailman_subscribe(subscribe_emails, mailman_config)
 
     # Copy and delete only the successful rows
     if copy_index:
