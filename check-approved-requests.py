@@ -132,7 +132,9 @@ def notify_helpdesk(**request_info):
     if 'project' not in request_info:
         request_info['project'] = 'N/A'
     msg = TemplateMessage(subject=subject, **request_info)
-    msg.send()
+    # TRAINING ONLY: print message to screen instead of sending it
+    # msg.send()
+    print msg.body
 
 
 def build_request_details(request_list, template):
@@ -188,7 +190,9 @@ def timestamp_spreadsheet(sheet, time, rows, column):
         row_values = []
         for x in range(rng[1] - rng[0]):
             row_values.append(
-                {'values': {'userEnteredValue': {'stringValue': time}}})
+                {'values': {'userEnteredValue': {'stringValue': 'approved'},
+                           {'userEnteredValue': {'stringValue': time}}})
+
         update_req = {'updateCells': {
                       'rows': row_values,
                       'fields': '*',
@@ -201,6 +205,8 @@ def timestamp_spreadsheet(sheet, time, rows, column):
                       }}}
         request_list.append(update_req)
     
+   # print request_list
+   # exit(0)
     batch = sheet.spreadsheets().batchUpdate(spreadsheetId=sheet._id,
                                              body={'requests': request_list})
     batch.execute()
@@ -248,8 +254,8 @@ def check_requests(request_type, auth_file, worksheet_key):
             # skip header row and blank rows
             continue
 
-        elif (row[0].lower().strip() == 'approved') and (row[1] == ''):
-            # process rows that are marked approved but not notified
+        # TRAINING ONLY - mark all new rows approved AND notified
+        elif row[0] == '':
             request_info = parse_function(row)
             notify_helpdesk(csr_type=csr_type,
                             priority='High',
