@@ -474,12 +474,14 @@ if __name__ == "__main__":
             except (ItemExistsError,
                     InvalidEmailError, ItemNotFoundError) as e:
                 bad_rows.append((user.row, e.message))
-                    
-    if subscribe_emails:
-        list_cfg = email_defaults.copy()
-        list_cfg.update(dict(config.items('listserv')))
-        listserv = message.ListservMessage(subscribe_emails, **list_cfg)
-        listserv.send()
+    
+    # TRAINING EDIT: Do not subscribe anyone to the mailing list
+    #
+    # if subscribe_emails:
+    #    list_cfg = email_defaults.copy()
+    #    list_cfg.update(dict(config.items('listserv')))
+    #    listserv = message.ListservMessage(subscribe_emails, **list_cfg)
+    #    listserv.send()
 
     # Copy and delete only the successful rows
     if copy_index:
