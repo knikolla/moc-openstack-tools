@@ -63,7 +63,7 @@ def parse_rows(rows, select_project=None):
             if len(rows) > 2:
                 print ("WARNING: Multiple requests found for project {}. All "
                        "{} requests will be processed. You may need to close "
-                       "multiple tickets.").format(args.project, len(rows))
+                       "multiple tickets.").format(args.project, len(rows) - 1)
         except ValueError as ve:
             raise argparse.ArgumentError(None, ve.message)
     else:
