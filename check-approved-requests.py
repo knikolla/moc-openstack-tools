@@ -133,15 +133,15 @@ def timestamp_spreadsheet(sheet, time, processed_rows):
     # FIXME: Specify worksheet name in config
     worksheet = 'Form Responses 1'
     range_list = sheet._group_index(processed_rows)
-   
     request_list = []
 
     for rng in range_list:
         row_values = []
         for x in range(rng[1] - rng[0]):
-            row_values.append({'userEnteredValue': {'stringValue': time}})
+            row_values.append(
+                {'values': {'userEnteredValue': {'stringValue': time}}})
         update_req = {'updateCells': {
-                      'rows': {'values': row_values},
+                      'rows': row_values,
                       'fields': '*',
                       'range': {
                           'sheetId': sheet.get_worksheet_id(worksheet),
@@ -201,12 +201,15 @@ def check_requests(request_type, auth_file, worksheet_key):
                             **request_info)
  
             processed_rows.append(idx)
-            timestamp_spreadsheet(sheet, timestamp, processed_rows)
             if args.log:
                 log_request(args.log, timestamp, request_info['user_email'])
         else:
             # skip over unapproved or already-notified rows
             continue
+
+    # Google API returns an error if you send an empty request
+    if processed_rows:
+        timestamp_spreadsheet(sheet, timestamp, processed_rows)
 
 
 if __name__ == '__main__':
