@@ -30,6 +30,7 @@ from spreadsheet import Spreadsheet
 from message import TemplateMessage
 from config import set_config_file
 from moc_utils import get_absolute_path
+from moc_utils import select_rows  # TRAINING ONLY
 
 
 def parse_user_row(cells):
@@ -140,9 +141,10 @@ def timestamp_spreadsheet(sheet, time, processed_rows):
     for rng in range_list:
         row_values = []
         for x in range(rng[1] - rng[0]):
+            # TRAINING ONLY - mark all new rows approved AND notified
             row_values.append(
-                {'values': {'userEnteredValue': {'stringValue': 'approved'},
-                           {'userEnteredValue': {'stringValue': time}}})
+                {'values': [{'userEnteredValue': {'stringValue': 'approved'}},
+                            {'userEnteredValue': {'stringValue': time}}]})
 
         update_req = {'updateCells': {
                       'rows': row_values,
@@ -175,7 +177,10 @@ def check_requests(request_type, auth_file, worksheet_key):
     rows = sheet.get_all_rows('Form Responses 1')
     timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S")
     processed_rows = []
-    
+
+    # TRAINING ONLY - column index for selecting by username
+    SELECT_INDEX = 3
+
     # set som type-specific things
     if request_type == 'access':
         parse_function = parse_user_row
@@ -186,8 +191,20 @@ def check_requests(request_type, auth_file, worksheet_key):
         csr_type = 'Quota Request'
     else:
         raise Exception('Unknown request type: `{}`'.format(request_type))
-    
-    for idx, row in enumerate(rows):
+   
+    if args.user:
+        try:
+            rows = select_rows(args.user, SELECT_INDEX, rows)
+            if len(rows) > 2:
+                print ("WARNING: Multiple requests found for user {}. All {} "
+                       "requests will be approved.").format(args.user,
+                                                            len(rows) - 1)
+        except ValueError as ve:
+            raise argparse.ArgumentError(None, ve.message)
+    else:
+        rows = enumerate(rows)
+
+    for idx, row in rows:
 
         if (idx == 0) or (row == []):
             # skip header row and blank rows
@@ -226,6 +243,22 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--log',
                         metavar='<log_file>',
                         help='Turn on logging and log to the specified file.')
+    
+    # TRAINING ONLY - allow auto-approval by username
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument('--user',
+                      help='Process requests for a single user.')
+    # The value of all_reqs is never used, its purpose is to require the caller
+    # to explicitly declare that they wish to process all rows
+    mode.add_argument('--all', dest='all_reqs', action='store_true',
+                      help='Process all available requests.')
+    
+    # TRAINING ONLY - specify either --access or --quota
+    request_type = parser.add_mutually_exclusive_group(required=True)
+    request_type.add_argument('--access', action='store_true',
+                              help='Proces the access request(s).')
+    request_type.add_argument('--quota', action='store_true',
+                              help='Process quota request(s).')
     args = parser.parse_args()
    
     CONFIG_FILE = set_config_file(args.config)
@@ -240,5 +273,8 @@ if __name__ == '__main__':
     quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
     quota_worksheet_key = config.get('quota_sheet', 'worksheet_key')
  
-    check_requests('access', auth_file, worksheet_key)
-    check_requests('quota', quota_auth_file, quota_worksheet_key)
+    # TRAINING ONLY - we only check the specified type of request
+    if args.access:
+        check_requests('access', auth_file, worksheet_key)
+    elif args.quota:
+        check_requests('quota', quota_auth_file, quota_worksheet_key)
