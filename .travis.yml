@@ -5,6 +5,7 @@ python:
 branches:
   only:
     - master
+    - helpdesk-training
 
 cache:
   - pip
