@@ -271,12 +271,12 @@ def parse_rows(rows, select_user=None):
                                   'phone': entry[9],
                                   'sponsor': entry[10],
                                   'pin': entry[11],
-                                  # entry[12] asks whether a new or existing
-                                  # project = only used for form navigation
-                                  # FIXME: add option to choose "no project"
-                                  # for teams who sign up for a new project
-                                  # together?
-                                  'comment': entry[13]})
+                                  'comment': entry[12]})
+                # entry[13] asks whether a new or existing
+                # project = only used for form navigation
+                # FIXME: add option to choose "no project"
+                # for teams who sign up for a new project
+                # together?
             
             user = User(row=idx, **user_info)
             
