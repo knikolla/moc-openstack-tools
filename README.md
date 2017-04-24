@@ -7,6 +7,7 @@ Packages:
     python-neutronclient
     python-cinderclient
     google-api-python-client
+    python-dateutil
 
 The script also requires a TLS-capable mail server to be running.  We have 
 used this code with both Sendmail and Postfix.  See 
