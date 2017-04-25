@@ -1,0 +1,8 @@
+This is a reminder that <FIRST_NAME> <LAST_NAME> submitted an application more than 24 hours ago, and is waiting for approval.
+
+User Full Name: <FIRST_NAME> <LAST_NAME>
+OpenStack Username: <USER_NAME>
+OpenStack Project: <PROJECT>
+Request Type: <REQUEST_TYPE>
+
+<COMMENT>

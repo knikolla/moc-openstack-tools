@@ -26,13 +26,14 @@ Each run of the script will:
 import argparse
 import ConfigParser
 import string
-from datetime import datetime, timedelta
+from datetime import datetime  # , timedelta # TRAINING - not used
 from spreadsheet import Spreadsheet
 from message import TemplateMessage
 from config import set_config_file
 from moc_utils import get_absolute_path
 from dateutil import parser as dateparser
 from moc_utils import select_rows  # TRAINING ONLY
+# from dateutil import parser as dateparser # TRAINING - not used
 
 
 def parse_user_row(cells):
@@ -166,7 +167,6 @@ def send_reminder(reminders, request_type, worksheet_key):
         request_list=reminders, template=reminder_cfg['detail_template'])
     spreadsheet_link = 'https://docs.google.com/spreadsheets/d/{}'.format(
         worksheet_key)
-    
     reminder_cfg.update({'request_count': str(len(reminders)),
                          'request_type': request_type,
                          'request_spreadsheet': spreadsheet_link,
@@ -280,21 +280,24 @@ def check_requests(request_type, auth_file, worksheet_key):
             processed_rows.append(idx)
             if args.log:
                 log_request(args.log, timestamp, request_info['user_email'])
+<<<<<<< HEAD
         
-        # if request is not approved and is >24 hours old, send a reminder
-        elif row[0] == '' and (now >= dateparser.parse(row[3]) +
-                               reminder_start):
-            # but only send if this is the first one, or if enough time
-            # has passed since the last one
-            if row[2]:
-                last_sent = datetime.strptime(row[2], TIMESTAMP_FORMAT)
-            else:
-                last_sent = None
+        # TRAINING ONLY - no reminders in the training environment
+        # # if request is not approved and is >24 hours old, send a reminder
+        # elif row[0] == '' and (now >= dateparser.parse(row[3]) +
+        #                        reminder_start):
+        #     # but only send if this is the first one, or if enough time
+        #     # has passed since the last one
+        #     if row[2]:
+        #         last_sent = datetime.strptime(row[2], TIMESTAMP_FORMAT)
+        #     else:
+        #         last_sent = None
 
-            if not last_sent or (now >= last_sent + reminder_interval):
-                request_info = parse_function(row)
-                reminder_list.append(request_info)
-                reminder_rows.append(idx)
+        #     if not last_sent or (now >= last_sent + reminder_interval):
+        #         request_info = parse_function(row)
+        #         reminder_list.append(request_info)
+        #         reminder_rows.append(idx)
+
         else:
             # skip over unapproved rows <24 hours old, or already-notified rows
             continue
@@ -339,6 +342,10 @@ if __name__ == '__main__':
                               help='Process quota request(s).')
     args = parser.parse_args()
    
+    # TRAINING ONLY - do not allow the `all` argument
+    if args.all_reqs:
+        raise Exception('The option --all is not allowed in Training Mode')
+
     CONFIG_FILE = set_config_file(args.config)
     config = ConfigParser.ConfigParser()
     config.read(CONFIG_FILE)
@@ -346,6 +353,8 @@ if __name__ == '__main__':
     # for auth_file, quota_auth_file, or helpdesk_template
     auth_file = get_absolute_path(config.get('excelsheet', 'auth_file'))
     worksheet_key = config.get('excelsheet', 'worksheet_key')
+    helpdesk_email = config.get('helpdesk', 'email')
+    helpdesk_template = get_absolute_path(config.get('helpdesk', 'template'))
     reminder_email = config.get('reminder', 'email')
     reminder_template = get_absolute_path(config.get('reminder', 'template'))
     quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
