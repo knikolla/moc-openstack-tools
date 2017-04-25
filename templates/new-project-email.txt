@@ -1,6 +1,6 @@
 Hi <FULLNAME>,
 
-A new OpenStack project has been created for you on MOC Production (Kaizen).  You can log in at:
+The new OpenStack project `<PROJECT>` has been created for you on MOC Production (Kaizen).  You can log in at:
 <LOGIN_URL>.  
 
 If you also requested a new user account, you will receive the details in a separate email.

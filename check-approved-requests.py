@@ -25,12 +25,13 @@ Each run of the script will:
 """
 import argparse
 import ConfigParser
-from datetime import datetime
+from datetime import datetime  # , timedelta # TRAINING - not used
 from spreadsheet import Spreadsheet
 from message import TemplateMessage
 from config import set_config_file
 from moc_utils import get_absolute_path
 from moc_utils import select_rows  # TRAINING ONLY
+# from dateutil import parser as dateparser # TRAINING - not used
 
 
 def parse_user_row(cells):
@@ -52,6 +53,7 @@ def parse_user_row(cells):
     if cells[14] != '':
         req_type = 'new Openstack project'
         comment += REQUEST.format(req=req_type, detail=cells[14])
+        user_info['project'] = cells[14]
 
         try:
             user_list = cells[16]
@@ -67,6 +69,7 @@ def parse_user_row(cells):
     elif cells[17] != '':
         req_type = 'access to existing OpenStack project'
         comment += REQUEST.format(req=req_type, detail=cells[17])
+        user_info['project'] = cells[17]
         
     user_info['comment'] = comment
     return user_info
@@ -127,6 +130,17 @@ def notify_helpdesk(template, sender, receiver, **request_info):
     # TRAINING ONLY: print message to screen instead of sending it
     # msg.send()
     print msg.body
+
+
+def reminder(template, sender, receiver, request_type, **request_info):
+    """Send a reminder email about an application waiting for approval
+    for more than 24 hours
+    """
+    subject = "Application Waiting for Approval"
+    msg = TemplateMessage(template=template, request_type=request_type,
+                          sender=sender, email=receiver,
+                          subject=subject, **request_info)
+    msg.send()
 
 
 def timestamp_spreadsheet(sheet, time, processed_rows):
@@ -224,6 +238,19 @@ def check_requests(request_type, auth_file, worksheet_key):
             processed_rows.append(idx)
             if args.log:
                 log_request(args.log, timestamp, request_info['user_email'])
+
+        # TRAINING ONLY - no reminders in the training environment
+        # elif (row[0] == '') and (datetime.now() >= dateparser.parse(row[2]) +
+        #                          timedelta(hours=24)):
+        #     # send reminder about rows that have been waiting for approval
+        #     # for more than 24 hours
+        #     request_info = parse_function(row)
+        #     reminder(template=reminder_template,
+        #              sender=reminder_email,
+        #              receiver=reminder_email,
+        #              request_type=request_type,
+        #              **request_info)
+
         else:
             # skip over unapproved or already-notified rows
             continue
@@ -261,6 +288,10 @@ if __name__ == '__main__':
                               help='Process quota request(s).')
     args = parser.parse_args()
    
+    # TRAINING ONLY - do not allow the `all` argument
+    if args.all_reqs:
+        raise Exception('The option --all is not allowed in Training Mode')
+
     CONFIG_FILE = set_config_file(args.config)
     config = ConfigParser.ConfigParser()
     config.read(CONFIG_FILE)
@@ -270,6 +301,8 @@ if __name__ == '__main__':
     worksheet_key = config.get('excelsheet', 'worksheet_key')
     helpdesk_email = config.get('helpdesk', 'email')
     helpdesk_template = get_absolute_path(config.get('helpdesk', 'template'))
+    reminder_email = config.get('reminder', 'email')
+    reminder_template = get_absolute_path(config.get('reminder', 'template'))
     quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
     quota_worksheet_key = config.get('quota_sheet', 'worksheet_key')
  
