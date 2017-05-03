@@ -119,13 +119,14 @@ def parse_quota_row(cells):
     return user_info
 
 
-def notify_helpdesk(template, sender, receiver, **request_info):
+def notify_helpdesk(**request_info):
     """Populate and send an email to the helpdesk to open a ticket"""
+    request_info.update(dict(config.items('email_defaults')))
+    request_info.update(dict(config.items('helpdesk')))
     subject = 'MOC {}'.format(request_info['csr_type'])
     if 'project' not in request_info:
         request_info['project'] = 'N/A'
-    msg = TemplateMessage(template=template, sender=sender, email=receiver,
-                          subject=subject, **request_info)
+    msg = TemplateMessage(subject=subject, **request_info)
     msg.send()
 
 
@@ -206,10 +207,7 @@ def check_requests(request_type, auth_file, worksheet_key):
         elif (row[0].lower().strip() == 'approved') and (row[1] == ''):
             # process rows that are marked approved but not notified
             request_info = parse_function(row)
-            notify_helpdesk(template=helpdesk_template,
-                            sender=helpdesk_email,
-                            receiver=helpdesk_email,
-                            csr_type=csr_type,
+            notify_helpdesk(csr_type=csr_type,
                             priority='High',
                             queue='Monitoring',
                             **request_info)
@@ -257,8 +255,6 @@ if __name__ == '__main__':
     # for auth_file, quota_auth_file, or helpdesk_template
     auth_file = get_absolute_path(config.get('excelsheet', 'auth_file'))
     worksheet_key = config.get('excelsheet', 'worksheet_key')
-    helpdesk_email = config.get('helpdesk', 'email')
-    helpdesk_template = get_absolute_path(config.get('helpdesk', 'template'))
     reminder_email = config.get('reminder', 'email')
     reminder_template = get_absolute_path(config.get('reminder', 'template'))
     quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
