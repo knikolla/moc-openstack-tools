@@ -33,6 +33,7 @@ Usage:
     python addusers.py
 """
 import re
+import sys
 import ConfigParser
 import argparse
 from keystoneclient.v3 import client
@@ -47,7 +48,7 @@ from quotas import QuotaManager
 from setpass import SetpassClient, random_password
 from config import set_config_file
 from moc_exceptions import (InvalidEmailError, ItemExistsError,
-                            ItemNotFoundError)
+                            ItemNotFoundError, NoApprovedRequests)
 
 
 class User(object):
@@ -219,10 +220,6 @@ def parse_rows(rows, select_user=None):
     if select_user:
         try:
             rows = select_rows(select_user, USER_COLUMN, rows)
-            if len(rows) > 2:
-                print ("WARNING: Multiple requests found for user {}. All {} "
-                       "requests will be processed.  You may need to close "
-                       "multiple tickets.").format(args.user, len(rows) - 1)
         except ValueError as ve:
             raise argparse.ArgumentError(None, ve.message)
     else:
@@ -311,17 +308,20 @@ def parse_rows(rows, select_user=None):
                     # FIXME by changing field order on the forms?
                     pass
                 except:
-                    # If the user typed something in this box but didn't follow
-                    # instructions
-                    print ("WARNING: unable to add users for project {} from "
-                           "input: {}.\nIf this is a valid request, add these "
-                           "users manually.").format(entry[14], entry[16])
+                    # If the user typed something in this box but didn't
+                    # follow instructions
+                    print ("WARNING: cannot add additional users to "
+                           "project `{}` from input: `{}`").format(
+                               entry[14], entry[16])
 
                 projects[project.name] = project
         except IndexError:
             # Somehow a required field is blank
             bad_rows.append((idx, "Missing Required Field"))
-           
+    
+    if not projects:
+        raise NoApprovedRequests(row_filter=select_user)
+
     return projects, bad_rows
 
 
@@ -332,6 +332,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=help_description)
     parser.add_argument('-c', '--config',
                         help='Specify configuration file.')
+    parser.add_argument('--debug', action='store_true',
+                        help='Print additional debugging output.')
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument('--user',
                       help='Process requests for a single user.')
@@ -373,8 +375,12 @@ if __name__ == "__main__":
     sheet = spreadsheet.Spreadsheet(auth_file, worksheet_key)
     rows = sheet.get_all_rows("Form Responses 1")
 
-    content, bad_rows = parse_rows(rows, select_user=args.user)
-    
+    try:
+        content, bad_rows = parse_rows(rows, select_user=args.user)
+    except NoApprovedRequests as e:
+        print e.message
+        sys.exit(1)
+ 
     copy_index = []
     subscribe_emails = []
 
@@ -384,10 +390,6 @@ if __name__ == "__main__":
     ks_projects = openstack.keystone.projects.list()
     ks_member_role = openstack.keystone.roles.find(name='_member_')
     
-    if not content:
-        # FIXME: make a better exception
-        raise Exception('No approved requests found.')
-
     for project in content:
         # what we get back here is a keystone project, or None
         ks_project = exists_in_keystone(content[project], ks_projects)
@@ -401,19 +403,12 @@ if __name__ == "__main__":
                 # this could happen if we delete a project or change its name
                 # but forget to update the form
                 raise ItemNotFoundError('Project', content[project].name)
-        except ItemExistsError:
-            print ("skipping existing project marked "
-                   "as new: {}").format(content[project].name)
-            continue
-            # FIXME: Actually handle this, it should just skip this project
-            # and do error reporting.  Need to consider whether to create
-            # the associated users or not.
+        except (ItemExistsError, ItemNotFoundError) as e:
+            # FIXME:  Need to some way to handle users associated with the
+            # skipped project
             # FIXME: Our form doesn't have a way to inform the user they
             # chose a project name that is already in use.  Can we do that?
-        except ItemNotFoundError:
-            # FIXME: Ditto to above, actually handle this
-            print ("skipping over not-found project "
-                   "{}").format(content[project].name)
+            bad_rows.append((content[project].row, e.message))
             continue
               
         # email id is used as username as well.....
@@ -433,11 +428,10 @@ if __name__ == "__main__":
                         raise ItemNotFoundError('User', user.name)
                     else:
                         # We don't treat this as a critical error
-                        print ("WARNING: Additional user {} does not exist. "
-                               "User will not be added to project {}."
-                               "Obtain the correct username and add the user"
-                               "manually.").format(user.name,
-                                                   ks_project.name)
+                        print ("WARNING: Additional user `{}` does not exist "
+                               "in Keystone. The user will not be added to "
+                               "project {}").format(user.name,
+                                                    ks_project.name)
                 
                 else:
                     print ("Adding existing user {} to "
@@ -466,17 +460,20 @@ if __name__ == "__main__":
 
     # Copy and delete only the successful rows
     if copy_index:
+        if args.user and (len(copy_index) > 1):
+            print ("WARNING: {} approved requests were processed for user {}. "
+                   "You may need to close multiple tickets.").format(
+                       len(copy_index), args.user)
         copy_rows = [r for r in rows if rows.index(r) in copy_index]
         sheet.append_rows(copy_rows, target="Current Users")
         result = sheet.delete_rows(copy_index, 'Form Responses 1')
-    else:
-        print "WARNING: No spreadsheet rows were copied."
-    
-    # In the web GUI, row 0 is numbered 1
-    # GUI_rows = [(x+1) for x in bad_rows]
-    # print ("WARNING: {count} rows ignored due to missing " +
-    #      "approval/notification: {rowlist}\n").format(count=len(bad_rows),
-    #                                                   rowlist=GUI_rows)
+    elif args.debug:
+        print "WARNING: No rows were successfully processed."
+   
+    if not args.debug:
+        # This error should only display in debugging mode
+        bad_rows = [(idx, msg) for (idx, msg) in bad_rows
+                    if "Approval/Notification Incomplete" not in msg]
  
     if bad_rows:
         ERROR_FORMAT = "{row:>16}    {error}"

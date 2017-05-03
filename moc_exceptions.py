@@ -1,3 +1,18 @@
+#   Copyright 2017 Massachusetts Open Cloud
+#
+#   Licensed under the Apache License, Version 2.0 (the "License"); you may
+#   not use this file except in compliance with the License. You may obtain
+#   a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#   License for the specific language governing permissions and limitations
+#   under the License.
+
+
 class InvalidEmailError(Exception):
     """User's email address does not pass basic format validation"""
 
@@ -26,8 +41,11 @@ class BadEmailRecipient(Exception):
                         "recipients.").format(subject)
 
 
-class ProjectNotFoundError(Exception):
-    """The specified project does not exist"""
-    def __init__(self, project_name):
-        message = 'Cannot find project: {}'.format(project_name)
-        super(ProjectNotFoundError, self).__init__(message)
+class NoApprovedRequests(Exception):
+    """No approved requests were found matching the given filter."""
+    def __init__(self, row_filter):
+        if not row_filter:
+            row_filter = '--all'
+        msg = ("No approved/ticketed requests found "
+               "matching: {}").format(row_filter)
+        super(NoApprovedRequests, self).__init__(msg)
