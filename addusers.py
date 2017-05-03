@@ -46,25 +46,8 @@ from moc_utils import get_absolute_path, select_rows
 from quotas import QuotaManager
 from setpass import SetpassClient, random_password
 from config import set_config_file
-
-
-class InvalidEmailError(Exception):
-    """User's email address does not pass basic format validation"""
-
-
-class ItemExistsError(Exception):
-    """Keystone resource already exists and cannot be created"""
-    def __init__(self, item_type, item_name):
-        msg = "{} exists with the name: {}".format(item_type, item_name)
-        super(ItemExistsError, self).__init__(msg)
-
-
-class ItemNotFoundError(Exception):
-    """The specified Keystone resource was not found"""
-    def __init__(self, item_type, item_name):
-        msg = "No {} found in Keystone with name: {}".format(item_type,
-                                                             item_name)
-        super(ItemNotFoundError, self).__init__(msg)
+from moc_exceptions import (InvalidEmailError, ItemExistsError,
+                            ItemNotFoundError)
 
 
 class User(object):

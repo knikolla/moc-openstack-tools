@@ -1,0 +1,7 @@
+flake8
+python-keystoneclient
+python-novaclient
+python-neutronclient
+python-cinderclient
+google-api-python-client
+python-dateutil

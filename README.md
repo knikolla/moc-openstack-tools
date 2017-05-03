@@ -1,14 +1,3 @@
-## Dependencies
-
-Packages:
-
-    python-keystoneclient
-    python-novaclient
-    python-neutronclient
-    python-cinderclient
-    google-api-python-client
-    python-dateutil
-
 The script also requires a TLS-capable mail server to be running.  We have 
 used this code with both Sendmail and Postfix.  See 
 [below](#mail-server-config) for the Postfix config required to enable TLS.
@@ -29,6 +18,13 @@ These scripts simplify the process of:
 4. Resetting a user's password if they forget it, also via Setpass.
 
 New user data is assumed to be in a Google Sheet. The function parse_rows in addusers.py handles parsing the spreadsheet data, you may need to modify it to work with your particular spreadsheet format.
+
+## Setup 
+During initial setup, run these commands to install the required dependencies:
+```
+# Possibly in a virtual environment 
+$ pip install -r requirements.txt 
+```
 
 ## How to use example_settings.ini
 Copy the examplee_settings.ini to settings.ini and then fill the fields required in that file.
