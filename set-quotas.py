@@ -75,22 +75,23 @@ def parse_rows(rows, select_project=None):
             continue
         else:
             project = dict()
-            # entry [2] is Timestamp
-            project['email'] = entry[3].replace(u'\xa0', ' ').strip()
-            project['user_fullname'] = entry[4] + ' ' + entry[5]
-            # entry[6] is organization
-            project['name'] = entry[7]
-            # entry[8] is Type of Increase
-            # entry[9] is End Date
-            quotas = {'instances': entry[10],
-                      'cores': entry[11],
-                      'ram': entry[12],
-                      'floatingip': entry[13],
-                      'network': entry[14],
-                      'port': entry[15],
-                      'volumes': entry[16],
-                      'snapshots': entry[17],
-                      'gigabytes': entry[18]}
+            # entry [2] is Reminder Sent
+            # entry [3] is Timestamp
+            project['email'] = entry[4].replace(u'\xa0', ' ').strip()
+            project['user_fullname'] = entry[5] + ' ' + entry[6]
+            # entry[7] is organization
+            project['name'] = entry[8]
+            # entry[9] is Type of Increase
+            # entry[10] is End Date
+            quotas = {'instances': entry[11],
+                      'cores': entry[12],
+                      'ram': entry[13],
+                      'floatingip': entry[14],
+                      'network': entry[15],
+                      'port': entry[16],
+                      'volumes': entry[17],
+                      'snapshots': entry[18],
+                      'gigabytes': entry[19]}
             
             unchanged_quotas = [q for q in quotas if quotas[q] == '']
             for quota_name in unchanged_quotas:
@@ -106,7 +107,9 @@ def parse_rows(rows, select_project=None):
 
             project['quotas'] = quotas
 
-            # entry[19] is Comments - required field
+            # entry[20] is Comments - required field
+            # entry[21] is MOC Notes - not required
+            
             project['row'] = idx
 
             project_list.append(project)

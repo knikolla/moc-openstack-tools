@@ -1,0 +1,4 @@
+User Full Name: <FIRST_NAME> <LAST_NAME>
+OpenStack Username: <USER_NAME>
+OpenStack Project: <PROJECT>
+<COMMENT>

@@ -25,6 +25,7 @@ Each run of the script will:
 """
 import argparse
 import ConfigParser
+import string
 from datetime import datetime, timedelta
 from spreadsheet import Spreadsheet
 from message import TemplateMessage
@@ -35,40 +36,40 @@ from dateutil import parser as dateparser
 
 def parse_user_row(cells):
     """Parse the new approved User/Project request row"""
-    email = cells[3].replace(u'\xa0', ' ').strip()
+    email = cells[4].replace(u'\xa0', ' ').strip()
     user_info = {'user_name': email,
                  'user_email': email,
-                 'first_name': cells[4],
-                 'last_name': cells[5]}
+                 'first_name': cells[5],
+                 'last_name': cells[6]}
     
     comment = 'User requested the following access:'.format(**user_info)
     
     REQUEST = "\n - {req}: `{detail}`"
 
-    if cells[6] == 'No':
+    if cells[7] == 'No':
         req_type = 'new OpenStack user account'
         comment += REQUEST.format(req=req_type, detail=email)
     
-    if cells[14] != '':
+    if cells[15] != '':
         req_type = 'new Openstack project'
-        comment += REQUEST.format(req=req_type, detail=cells[14])
-        user_info['project'] = cells[14]
+        comment += REQUEST.format(req=req_type, detail=cells[15])
+        user_info['project'] = cells[15]
 
         try:
-            user_list = cells[16]
+            user_list = cells[17]
             req_type = "add existing users to new project"
             comment += REQUEST.format(req=req_type, detail=user_list)
         except IndexError:
-            # it's OK for cells[16] not to exist at all
+            # it's OK for cells[17] not to exist at all
             pass
         
         # project description at the end because it might be long
-        comment += "\n\nNew Project Description:\n{}".format(cells[15])
+        comment += "\n\nNew Project Description:\n{}".format(cells[16])
     
-    elif cells[17] != '':
+    elif cells[18] != '':
         req_type = 'access to existing OpenStack project'
-        comment += REQUEST.format(req=req_type, detail=cells[17])
-        user_info['project'] = cells[17]
+        comment += REQUEST.format(req=req_type, detail=cells[18])
+        user_info['project'] = cells[18]
         
     user_info['comment'] = comment
     return user_info
@@ -78,16 +79,20 @@ def parse_quota_row(cells):
     """Parse the new approved Quota request row"""
     # NOTE: cells[16] is a required field in the Google Form, so it is safe
     # to assume cells[0:15] exists.
-    email = cells[3].replace(u'\xa0', ' ').strip()
+    # cells[0] is Approved
+    # cells[1] is Helpdesk Notified
+    # cells[2] is Reminder Sent
+    # cells[3] is Timestamp
+    email = cells[4].replace(u'\xa0', ' ').strip()
     user_info = {'user_name': email,
                  'user_email': email,
-                 'first_name': cells[4],
-                 'last_name': cells[5],
-                 # cells[6] is Organization
-                 'project': cells[7]}
+                 'first_name': cells[5],
+                 'last_name': cells[6],
+                 # cells[7] is Organization
+                 'project': cells[8]}
 
-    # cells[8] is Type of Increase (Temp/Permanent)
-    # cells[9] is End Date (for temp requests)
+    # cells[9] is Type of Increase (Temp/Permanent)
+    # cells[10] is End Date (for temp requests)
 
     comment = 'New quota request for project: {}'.format(user_info['project'])
     comment += "\n\nRequest Details:\n"
@@ -95,13 +100,13 @@ def parse_quota_row(cells):
     # FIXME: this code block is lifted straight from set-quotas.py,
     # farm it out to a function somewhere to streamline updates.  Possibly
     # also update to use a list and for i in range().
-    quotas = {'instances': cells[10],
-              'cores': cells[11],
-              'ram': cells[12],
-              'floatingip': cells[13],
-              'volumes': cells[14],
-              'snapshots': cells[15],
-              'gigabytes': cells[16]}
+    quotas = {'instances': cells[11],
+              'cores': cells[12],
+              'ram': cells[13],
+              'floatingip': cells[14],
+              'volumes': cells[15],
+              'snapshots': cells[16],
+              'gigabytes': cells[17]}
     unchanged_quotas = [q for q in quotas if quotas[q] == '']
     for quota_name in unchanged_quotas:
             del quotas[quota_name]
@@ -130,24 +135,53 @@ def notify_helpdesk(**request_info):
     msg.send()
 
 
-def reminder(template, sender, receiver, request_type, **request_info):
+def build_request_details(request_list, template):
+    """Build the list of request details to be sent in the reminder message"""
+    template = get_absolute_path(template)
+    all_details = ""
+    with open(template, "r") as f:
+        detail_base = f.read()
+    f.close()
+    for request in request_list:
+        item_details = detail_base
+        for key in request:
+            placeholder = "<{}>".format(key.upper())
+            item_details = string.replace(item_details, placeholder,
+                                          request[key])
+        all_details += "\n-----\n{}".format(item_details)
+    
+    return all_details
+
+
+def send_reminder(reminders, request_type, worksheet_key):
     """Send a reminder email about an application waiting for approval
     for more than 24 hours
     """
-    subject = "Application Waiting for Approval"
-    msg = TemplateMessage(template=template, request_type=request_type,
-                          sender=sender, email=receiver,
-                          subject=subject, **request_info)
+    reminder_cfg = dict(config.items('email_defaults'))
+    reminder_cfg.update(dict(config.items('reminder')))
+    request_details = build_request_details(
+        request_list=reminders, template=reminder_cfg['detail_template'])
+    spreadsheet_link = 'https://docs.google.com/spreadsheets/d/{}'.format(
+        worksheet_key)
+    
+    reminder_cfg.update({'request_count': str(len(reminders)),
+                         'request_type': request_type,
+                         'request_spreadsheet': spreadsheet_link,
+                         'request_details': request_details})
+
+    msg = TemplateMessage(**reminder_cfg)
     msg.send()
 
 
-def timestamp_spreadsheet(sheet, time, processed_rows):
+def timestamp_spreadsheet(sheet, time, rows, column):
     """Mark the given rows as notified in the Google Sheet"""
-    # FIXME: consider whether spreadsheet.py should do some of this work
-    
+    # FIXME: consider whether spreadsheet.py should do some of this work,
+    # particularly since below the private method _group_index is used
+
     # FIXME: Specify worksheet name in config
     worksheet = 'Form Responses 1'
-    range_list = sheet._group_index(processed_rows)
+
+    range_list = sheet._group_index(rows)
     request_list = []
 
     for rng in range_list:
@@ -162,8 +196,8 @@ def timestamp_spreadsheet(sheet, time, processed_rows):
                           'sheetId': sheet.get_worksheet_id(worksheet),
                           'startRowIndex': rng[0],
                           'endRowIndex': rng[1],
-                          'startColumnIndex': 1,
-                          'endColumnIndex': 2,
+                          'startColumnIndex': column,
+                          'endColumnIndex': column + 1,
                       }}}
         request_list.append(update_req)
     
@@ -182,17 +216,27 @@ def log_request(logfile, timestamp, user):
 
 def check_requests(request_type, auth_file, worksheet_key):
     """Check for new approved requests"""
+    # Some definitions that should eventually be set in config
+    TIMESTAMP_FORMAT = "%d %b %Y %H:%M:%S"
+    # hours until first reminder sent
+    reminder_start = timedelta(hours=int(config.get('reminder', 'start')))
+    # interval to send subsequent reminders
+    reminder_interval = timedelta(hours=int(config.get('reminder',
+                                                       'interval')))
     sheet = Spreadsheet(keyfile=auth_file, sheet_id=worksheet_key)
     rows = sheet.get_all_rows('Form Responses 1')
-    timestamp = datetime.now().strftime("%d %b %Y %H:%M:%S")
+    timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
     processed_rows = []
-    
-    # set som type-specific things
-    if request_type == 'access':
+    reminder_list = []
+    reminder_rows = []
+    now = datetime.now()
+   
+    # set some type-specific things
+    if request_type == 'Access':
         parse_function = parse_user_row
         csr_type = 'Access Request'
 
-    elif request_type == 'quota':
+    elif request_type == 'Quota':
         parse_function = parse_quota_row
         csr_type = 'Quota Request'
     else:
@@ -215,25 +259,35 @@ def check_requests(request_type, auth_file, worksheet_key):
             processed_rows.append(idx)
             if args.log:
                 log_request(args.log, timestamp, request_info['user_email'])
+        
+        # if request is not approved and is >24 hours old, send a reminder
+        elif row[0] == '' and (now >= dateparser.parse(row[3]) +
+                               reminder_start):
+            # but only send if this is the first one, or if enough time
+            # has passed since the last one
+            if row[2]:
+                last_sent = datetime.strptime(row[2], TIMESTAMP_FORMAT)
+            else:
+                last_sent = None
 
-        elif (row[0] == '') and (datetime.now() >= dateparser.parse(row[2]) +
-                                 timedelta(hours=24)):
-            # send reminder about rows that have been waiting for approval
-            # for more than 24 hours
-            request_info = parse_function(row)
-            reminder(template=reminder_template,
-                     sender=reminder_email,
-                     receiver=reminder_email,
-                     request_type=request_type,
-                     **request_info)
-
+            if not last_sent or (now >= last_sent + reminder_interval):
+                request_info = parse_function(row)
+                reminder_list.append(request_info)
+                reminder_rows.append(idx)
         else:
-            # skip over unapproved or already-notified rows
+            # skip over unapproved rows <24 hours old, or already-notified rows
             continue
 
-    # Google API returns an error if you send an empty request
+    # Skip sending empty requests to Google API because it is slow and returns
+    # an error.  Try/catch would handle the error but not avoid the time cost.
     if processed_rows:
-        timestamp_spreadsheet(sheet, timestamp, processed_rows)
+        timestamp_spreadsheet(sheet, timestamp, processed_rows, column=1)
+     
+    if reminder_list:
+        send_reminder(request_type=request_type,
+                      reminders=reminder_list,
+                      worksheet_key=worksheet_key)
+        timestamp_spreadsheet(sheet, timestamp, reminder_rows, column=2)
 
 
 if __name__ == '__main__':
@@ -260,5 +314,5 @@ if __name__ == '__main__':
     quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
     quota_worksheet_key = config.get('quota_sheet', 'worksheet_key')
  
-    check_requests('access', auth_file, worksheet_key)
-    check_requests('quota', quota_auth_file, quota_worksheet_key)
+    check_requests('Access', auth_file, worksheet_key)
+    check_requests('Quota', quota_auth_file, quota_worksheet_key)

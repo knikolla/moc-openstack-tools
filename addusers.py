@@ -232,27 +232,29 @@ def parse_rows(rows, select_user=None):
         elif (entry[0].lower().strip() != 'approved') or (entry[1] == ''):
             # Don't process requests that haven't gone through the
             # approval/notification process yet
-            # entry[0] is Approved, entry[1] is Helpdesk Notified
+            # entry[0] is Approved
+            # entry[1] is Helpdesk Notified
+            # entry[2] is Reminder sent
             bad_rows.append((idx, ("Approval/Notification "
-                                   "Incomplete: {}").format(entry[3])))
+                                   "Incomplete: {}").format(entry[4])))
             continue
         try:
             # entry[2] is Timestamp
-            email = entry[3].replace(u'\xa0', ' ').strip()
+            email = entry[4].replace(u'\xa0', ' ').strip()
             user_info = {'user_name': email,
                          'email': email,
-                         'first_name': entry[4],
-                         'last_name': entry[5]}
+                         'first_name': entry[5],
+                         'last_name': entry[6]}
 
-            if entry[6] == 'No':
+            if entry[7] == 'No':
                 user_info.update({'is_new': True,
-                                  'org': entry[7],
-                                  'role': entry[8],
-                                  'phone': entry[9],
-                                  'sponsor': entry[10],
-                                  'pin': entry[11],
-                                  'comment': entry[12]})
-                # entry[13] asks whether a new or existing
+                                  'org': entry[8],
+                                  'role': entry[9],
+                                  'phone': entry[10],
+                                  'sponsor': entry[11],
+                                  'pin': entry[12],
+                                  'comment': entry[13]})
+                # entry[14] asks whether a new or existing
                 # project = only used for form navigation
                 # FIXME: add option to choose "no project"
                 # for teams who sign up for a new project
@@ -260,20 +262,20 @@ def parse_rows(rows, select_user=None):
             
             user = User(row=idx, **user_info)
             
-            if entry[14] == "":
+            if entry[15] == "":
                 # the user chose to join an existing project
-                # info in entry[17] to entry[19]
-                project_name = entry[17]
+                # info in entry[18] to entry[20]
+                project_name = entry[18]
                 if project_name not in projects:
                     project = Project(row=idx,
                                       name=project_name,
-                                      contact_name=entry[18],
-                                      contact_email=entry[19])
+                                      contact_name=entry[19],
+                                      contact_email=entry[20])
                     projects[project.name] = project
                  
                 projects[project_name].users.append(user)
             
-            elif entry[14] in projects:
+            elif entry[15] in projects:
                 # FIXME:
                 # This should probably raise an error of some sort.  It
                 # covers 2 weird edge cases, either:
@@ -283,27 +285,27 @@ def parse_rows(rows, select_user=None):
                 #      batch requested a new project with this name.
                 # For now, while we get stuff working, just assume they are
                 # the same project.
-                projects[entry[14]].users.append(user)
+                projects[entry[15]].users.append(user)
 
             else:
-                # a new project was requested - info in entry[14] to entry[16]
+                # a new project was requested - info in entry[15] to entry[17]
                 project = Project(
-                    row=idx, name=entry[14],
+                    row=idx, name=entry[15],
                     contact_name=user.first_name + " " + user.last_name,
                     contact_email=user.email,
-                    description=entry[15],
+                    description=entry[16],
                     is_new=True)
                 project.users.append(user)
 
                 try:
-                    for add_user in entry[16].split(','):
+                    for add_user in entry[17].split(','):
                         add_user = add_user.strip()
                         existing_user = User(row=idx, user_name=add_user,
                                              email=add_user,
                                              is_requestor=False)
                         project.users.append(existing_user)
                 except IndexError:
-                    # entry[16] is the last possible filled cell in a new
+                    # entry[17] is the last possible filled cell in a new
                     # project entry, so if it was left blank it's not there
                     # FIXME by changing field order on the forms?
                     pass
@@ -312,7 +314,7 @@ def parse_rows(rows, select_user=None):
                     # follow instructions
                     print ("WARNING: cannot add additional users to "
                            "project `{}` from input: `{}`").format(
-                               entry[14], entry[16])
+                               entry[15], entry[17])
 
                 projects[project.name] = project
         except IndexError:
