@@ -48,7 +48,7 @@ def parse_rows(rows, select_project=None):
     
     # Column index in the Google Sheet for project name
     # This may need to be updated if question order on the form is changed
-    PROJECT_COLUMN = 7
+    PROJECT_COLUMN = 8
     
     project_list = []
 

@@ -212,7 +212,7 @@ def parse_rows(rows, select_user=None):
     """
     # Column index in the Google Sheet for username
     # This may need to be updated if question order on the form is changed
-    USER_COLUMN = 3
+    USER_COLUMN = 4
 
     projects = {}
     bad_rows = []
@@ -235,11 +235,11 @@ def parse_rows(rows, select_user=None):
             # entry[0] is Approved
             # entry[1] is Helpdesk Notified
             # entry[2] is Reminder sent
+            # entry[3] is Timestamp
             bad_rows.append((idx, ("Approval/Notification "
                                    "Incomplete: {}").format(entry[4])))
             continue
         try:
-            # entry[2] is Timestamp
             email = entry[4].replace(u'\xa0', ' ').strip()
             user_info = {'user_name': email,
                          'email': email,
