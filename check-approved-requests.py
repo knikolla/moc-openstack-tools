@@ -238,7 +238,7 @@ def check_requests(request_type, auth_file, worksheet_key):
 
     elif request_type == 'Quota':
         parse_function = parse_quota_row
-        csr_type = 'Quota Request'
+        csr_type = 'Change Quota'
     else:
         raise Exception('Unknown request type: `{}`'.format(request_type))
     
