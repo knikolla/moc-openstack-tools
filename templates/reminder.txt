@@ -1,6 +1,6 @@
 <html>
 <body>
-<p>This is an automated reminder that there are <REQUEST_COUNT> <REQUEST_TYPE> requests that have waited over 24 hours for approval.</p>
+<p>This is an automated reminder that there are <REQUEST_COUNT> <REQUEST_TYPE> requests that have waited over <START> hours for approval.</p>
 
 <p>Click this link to view the request spreadsheet:<br><a href="<REQUEST_SPREADSHEET>"><REQUEST_TYPE> Request Spreadsheet</a></p>
 
