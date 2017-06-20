@@ -13,6 +13,8 @@
 #   under the License.
 """Centralized configuration setup"""
 from os import path
+from oslo_config import cfg
+from oslo_log import log
 
 
 def set_config_file(cfg_file=None):
@@ -34,3 +36,10 @@ def set_config_file(cfg_file=None):
             raise IOError("No valid configuration files found.")
 
     return CONFIG
+
+
+"""Oslo_log setup"""
+LOG = log.getLogger('root')
+CONF = cfg.CONF
+log.register_options(CONF)
+log.setup(CONF, 'demo')
