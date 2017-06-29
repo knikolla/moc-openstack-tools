@@ -312,7 +312,7 @@ def parse_rows(rows, select_user=None):
                 except:
                     # If the user typed something in this box but didn't
                     # follow instructions
-                    LOG.warning(("WARNING: cannot add additional users to "
+                    LOG.warning((" cannot add additional users to "
                                  "project `{}` from input: `{}`").format(
                                      entry[15], entry[17]))
 
@@ -430,7 +430,7 @@ if __name__ == "__main__":
                         raise ItemNotFoundError('User', user.name)
                     else:
                         # We don't treat this as a critical error
-                        LOG.warning(("WARNING: Additional user `{}` does "
+                        LOG.warning((" Additional user `{}` does "
                                      "not exist in Keystone. The user "
                                      "will not be added to project "
                                      "{}").format(user.name,
@@ -465,14 +465,14 @@ if __name__ == "__main__":
     # Copy and delete only the successful rows
     if copy_index:
         if args.user and (len(copy_index) > 1):
-            LOG.warning(("WARNING: {} approved requests were processed "
+            LOG.warning((" {} approved requests were processed "
                          "for user {}. You may need to close multiple "
                          "tickets.").format(len(copy_index), args.user))
         copy_rows = [r for r in rows if rows.index(r) in copy_index]
         sheet.append_rows(copy_rows, target="Current Users")
         result = sheet.delete_rows(copy_index, 'Form Responses 1')
     elif args.debug:
-        LOG.warning("WARNING: No rows were successfully processed.")
+        LOG.warning(" No rows were successfully processed.")
    
     if not args.debug:
         # This error should only display in debugging mode
