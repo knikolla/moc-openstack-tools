@@ -39,6 +39,7 @@ import argparse
 from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
+from subprocess import Popen, PIPE
 
 # local
 import message
@@ -327,6 +328,18 @@ def parse_rows(rows, select_user=None):
     return projects, bad_rows
 
 
+def mailman_subscribe(email_list, mailman_config):
+    "Subscribe each address in email_list to the Mailman mailing list"
+
+    subscriber_list = "\n".join(email_list)
+  
+    ssh_command = ("ssh -l {mailman_user} {mailman_server} "
+                   "{subscribe_command}").format(**mailman_config)
+
+    subp = Popen(ssh_command.split(), stdin=PIPE, stderr=PIPE)
+    subp.communicate(input=subscriber_list)[0]
+
+
 if __name__ == "__main__":
     
     help_description = ("Add new users and projects to OpenStack using "
@@ -455,10 +468,8 @@ if __name__ == "__main__":
                 bad_rows.append((user.row, e.message))
                     
     if subscribe_emails:
-        list_cfg = email_defaults.copy()
-        list_cfg.update(dict(config.items('listserv')))
-        listserv = message.ListservMessage(subscribe_emails, **list_cfg)
-        listserv.send()
+        mailman_config = dict(config.items('mailman'))
+        mailman_subscribe(subscribe_emails, mailman_config)
 
     # Copy and delete only the successful rows
     if copy_index:
