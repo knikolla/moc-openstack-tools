@@ -223,18 +223,19 @@ def check_requests(request_type, auth_file, worksheet_key):
     """Check for new approved requests"""
     # Some definitions that should eventually be set in config
     TIMESTAMP_FORMAT = "%d %b %Y %H:%M:%S"
-    # hours until first reminder sent
-    reminder_start = timedelta(hours=int(config.get('reminder', 'start')))
-    # interval to send subsequent reminders
-    reminder_interval = timedelta(hours=int(config.get('reminder',
-                                                       'interval')))
+    # TRAINING - no reminders
+    # # hours until first reminder sent
+    # reminder_start = timedelta(hours=int(config.get('reminder', 'start')))
+    # # interval to send subsequent reminders
+    # reminder_interval = timedelta(hours=int(config.get('reminder',
+    #                                                    'interval')))
     sheet = Spreadsheet(keyfile=auth_file, sheet_id=worksheet_key)
     rows = sheet.get_all_rows('Form Responses 1')
     timestamp = datetime.now().strftime(TIMESTAMP_FORMAT)
     processed_rows = []
     reminder_list = []
     reminder_rows = []
-    now = datetime.now()
+    # now = datetime.now()  # NOT USED IN TRAINING
 
     # TRAINING ONLY - column index for selecting by username
     SELECT_INDEX = 3
@@ -279,7 +280,7 @@ def check_requests(request_type, auth_file, worksheet_key):
             processed_rows.append(idx)
             if args.log:
                 log_request(args.log, timestamp, request_info['user_email'])
-D
+
         # TRAINING ONLY - no reminders in the training environment
         # # if request is not approved and is >24 hours old, send a reminder
         # elif row[0] == '' and (now >= dateparser.parse(row[3]) +
