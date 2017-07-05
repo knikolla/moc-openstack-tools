@@ -155,7 +155,7 @@ def build_request_details(request_list, template):
 
 def send_reminder(reminders, request_type, worksheet_key):
     """Send a reminder email about an application waiting for approval
-    for more than 24 hours
+    for more than a given # of hours (specified in config)
     """
     reminder_cfg = dict(config.items('email_defaults'))
     reminder_cfg.update(dict(config.items('reminder')))
@@ -260,7 +260,8 @@ def check_requests(request_type, auth_file, worksheet_key):
             if args.log:
                 log_request(args.log, timestamp, request_info['user_email'])
         
-        # if request is not approved and is >24 hours old, send a reminder
+        # if request is not approved and is more than `reminder_start`
+        # hours old, send a reminder
         elif row[0] == '' and (now >= dateparser.parse(row[3]) +
                                reminder_start):
             # but only send if this is the first one, or if enough time
