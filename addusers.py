@@ -468,7 +468,7 @@ if __name__ == "__main__":
             except (ItemExistsError,
                     InvalidEmailError, ItemNotFoundError) as e:
                 bad_rows.append((user.row, e.message))
-                    
+               
     # TRAINING EDIT: Do not subscribe anyone to the mailing list
     #
     # if subscribe_emails:

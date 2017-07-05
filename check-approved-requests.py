@@ -31,7 +31,6 @@ from spreadsheet import Spreadsheet
 from message import TemplateMessage
 from config import set_config_file
 from moc_utils import get_absolute_path
-from dateutil import parser as dateparser
 from moc_utils import select_rows  # TRAINING ONLY
 # from dateutil import parser as dateparser # TRAINING - not used
 
@@ -280,8 +279,7 @@ def check_requests(request_type, auth_file, worksheet_key):
             processed_rows.append(idx)
             if args.log:
                 log_request(args.log, timestamp, request_info['user_email'])
-<<<<<<< HEAD
-        
+D
         # TRAINING ONLY - no reminders in the training environment
         # # if request is not approved and is >24 hours old, send a reminder
         # elif row[0] == '' and (now >= dateparser.parse(row[3]) +
@@ -297,7 +295,7 @@ def check_requests(request_type, auth_file, worksheet_key):
         #         request_info = parse_function(row)
         #         reminder_list.append(request_info)
         #         reminder_rows.append(idx)
-
+        
         else:
             # skip over unapproved rows <24 hours old, or already-notified rows
             continue
