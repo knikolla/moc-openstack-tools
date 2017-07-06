@@ -48,13 +48,13 @@ def parse_rows(rows, select_project=None):
     
     # Column index in the Google Sheet for project name
     # This may need to be updated if question order on the form is changed
-    header_project_column = rows[0].index(project_column)
+    PROJECT_COLUMN = 8
     
     project_list = []
 
     if select_project:
         try:
-            rows = select_rows(select_project, header_project_column, rows)
+            rows = select_rows(select_project, PROJECT_COLUMN, rows)
             if len(rows) > 2:
                 print ("WARNING: Multiple requests found for project {}. All "
                        "{} requests will be processed. You may need to close "
@@ -183,9 +183,6 @@ if __name__ == "__main__":
     admin_project = config.get('auth', 'admin_project')
     auth_url = config.get('auth', 'auth_url')
     nova_version = config.get('nova', 'version')
-
-    project_column = config.get('header_column', 'project_column')
-
     quota_auth_file = get_absolute_path(config.get('quota_sheet', 'auth_file'))
     quota_worksheet_key = config.get('quota_sheet', 'worksheet_key')
     quota_template = config.get('quota_email', 'template')

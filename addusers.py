@@ -213,14 +213,14 @@ def parse_rows(rows, select_user=None):
     """
     # Column index in the Google Sheet for username
     # This may need to be updated if question order on the form is changed
-    header_user_column = rows[0].index(email_column)
+    USER_COLUMN = 4
 
     projects = {}
     bad_rows = []
 
     if select_user:
         try:
-            rows = select_rows(select_user, header_user_column, rows)
+            rows = select_rows(select_user, USER_COLUMN, rows)
         except ValueError as ve:
             raise argparse.ArgumentError(None, ve.message)
     else:
@@ -369,29 +369,6 @@ if __name__ == "__main__":
     admin_project = config.get('auth', 'admin_project')
     auth_url = config.get('auth', 'auth_url')
     nova_version = config.get('nova', 'version')
-
-    approved_column = config.get('header_column', 'approved_column')
-    helpdesk_column = config.get('header_column', 'helpdesk_column')
-    reminder_column = config.get('header_column', 'reminder_column')
-    timestamp_column = config.get('header_column', 'timestamp_column')
-    email_column = config.get('header_column', 'email_column')
-    first_name_column = config.get('header_column', 'first_name_column')
-    last_name_column = config.get('header_column', 'last_name_column')
-    account_column = config.get('header_column', 'account_column')
-    organization_column = config.get('header_column', 'organization_column')
-    role_column = config.get('header_column', 'role_column')
-    phone_column = config.get('header_column', 'phone_column')
-    moc_contact_column = config.get('header_column', 'moc_contact_column')
-    pin_column = config.get('header_column', 'pin_column')
-    comment_column = config.get('header_column', 'comment_column')
-    project_exist_column = config.get('header_column', 'project_exist_column')
-    project_name_column = config.get('header_column', 'project_name_column')
-    project_description_column = config.get('header_column',
-                                            'project_description_column')
-    add_users_column = config.get('header_column', 'add_users_column')
-    join_project_column = config.get('header_column', 'join_project_column')
-    contact_name_column = config.get('header_column', 'contact_name_column')
-    contact_email_column = config.get('header_column', 'contact_email_column')
 
     setpass_url = config.get('setpass', 'setpass_url')
     auth = v3.Password(auth_url=auth_url,
