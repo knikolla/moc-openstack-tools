@@ -1,0 +1,15 @@
+
+A new request has been approved in Engage1.
+
+Please sign into <HELPDESK_URL> to process it.
+
+Request Type: [<CSR_TYPE>]
+  
+User Full Name: <FIRST_NAME> <LAST_NAME>
+OpenStack Username: <USER_NAME>
+OpenStack Project: <PROJECT>
+
+Go to the spreadsheet for approval:
+<SPREADSHEET>
+
+<COMMENT>
