@@ -1,0 +1,62 @@
+MOC OPENSTACK HELPDESK INTERFACE
+
+Brief instructions for helpdesk operators.
+
+## Available MOC Commands:
+From this account you should be able to run the following commands:
+
+    $ moc grant-access --user <USERNAME>
+        Process access requests from the specified user.
+
+    $ moc help
+        Display this message.
+
+    $ moc reset-password <username> <4-digit-pin>
+        Generates a link that an existing user can use to reset their password,
+        and sends the link via email to the address associated with the user account.
+        NOTE: For security, this link should not be sent to any other email address.
+
+    $ moc update-quotas --project <PROJECT>
+        Process the quota update request for the specified project.
+
+
+## Access Requests
+
+Once an access request ticket is received, log into the helpdesk VM and type:
+
+     $ moc grant-access --user <USERNAME>
+
+The username will be provided in the ticket and will be an email address.
+
+
+## Resetting passwords:
+
+The ticket will contain the OpenStack username and a 4 digit PIN.  Log into the
+helpdesk VM and type:
+
+    $ moc reset-password <USERNAME> <PIN>
+
+This will email a link to the user which they can use to reset their password.
+The email will be sent to the email address associated with their OpenStack
+account.  In most cases this also their OpenStack username.
+
+The link is only sent to the email address on file for the user, and should not
+be sent to any other address.  If the user says they do not receive the email, or
+asks for the link sent to be sent to a different email account for any reason,
+please assign the ticket to an MOC staff member.
+
+
+## Updating quotas
+
+When a quota request ticket is received, log into the helpdesk VM and type:
+
+    $ moc update-quotas --project <PROJECT>
+
+The project name is provided in the ticket.
+
+
+## Something is not working right
+
+Please assign the ticket to MOC Staff, and include any tracebacks or error
+output to help us fix the problem.
+
