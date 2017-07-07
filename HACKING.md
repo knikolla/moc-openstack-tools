@@ -93,6 +93,8 @@ It's best to use a second VM for the helpdesk even in development environments. 
     $ cd ~moc-tools
     $ git clone https://CCI-MOC/moc-openstack-tools helpdesk
     $ cd helpdesk
+    $ sudo yum install epel-release
+    $ sudo yum install python-pip
     $ sudo pip install -r requirements.txt
     $ sudo chown -R moc-tools:moc-tools ~moc-tools/*
     $ sudo su - moc-tools
