@@ -1,0 +1,5 @@
+helpdesk ALL=(moc-tools) NOPASSWD: /bin/python /usr/local/src/moc-tools/production/helpdesk/test.py*
+helpdesk ALL=(moc-tools) NOPASSWD: /bin/cat /usr/local/src/moc-tools/production/helpdesk/help.txt
+helpdesk ALL=(moc-tools) NOPASSWD: /bin/python /usr/local/src/moc-tools/production/addusers.py*
+helpdesk ALL=(moc-tools) NOPASSWD: /bin/python /usr/local/src/moc-tools/production/reset-password.py*
+helpdesk ALL=(moc-tools) NOPASSWD: /bin/python /usr/local/src/moc-tools/production/set-quotas.py*
