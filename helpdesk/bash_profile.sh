@@ -3,7 +3,7 @@
 if [ "$(id -gn)" == "helpdesk" ]; then
     echo "Welcome to the MOC helpdesk interface.  Type \`moc help\` for instructions."
    
-    SCRIPT_DIR='/usr/local/src/moc-tools/engage1'
+    SCRIPT_DIR='/usr/local/src/moc-tools/production'
  
     moc() {
         if [[ $@ == "help" ]]; then
