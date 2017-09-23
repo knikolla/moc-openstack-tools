@@ -105,7 +105,7 @@ if __name__ == "__main__":
     url = setpass.get_url(token)
 
     email_config = dict(config.items('email_defaults'))
-    email_config.update(dict(config.items('reset_password_email')))
+    email_config.update(dict(config.items('password_reset_email')))
     
     email = TemplateMessage(email=args.username, fullname=args.username,
                             setpass_token_url=url, **email_config)
