@@ -10,7 +10,7 @@ if [ "$(id -gn)" == "helpdesk" ]; then
             command sudo -u moc-tools cat "$SCRIPT_DIR/helpdesk/help.txt" | more
         elif [[ $@ =~ ^reset-password ]]; then
             shift 1
-            command sudo -u moc-tools python "$SCRIPT_DIR/helpdesk/reset-password.py" $@
+            command sudo -u moc-tools python "$SCRIPT_DIR/reset-password.py" $@
         elif [[ $@ =~ ^grant-access ]]; then
             shift 1
             command sudo -u moc-tools python "$SCRIPT_DIR/addusers.py" $@
