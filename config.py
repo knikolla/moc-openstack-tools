@@ -41,5 +41,12 @@ def set_config_file(cfg_file=None):
 """Oslo_log setup"""
 LOG = log.getLogger('root')
 CONF = cfg.CONF
+log_cfg = path.join(path.dirname(path.abspath(__file__)),
+    'helpdesk-logging.conf')
 log.register_options(CONF)
+if path.isfile(default_cfg_file):
+    CONF(default_config_files=log_cfg)
+else:
+    raise IOError('You have to configure logging in '
+                  'helpdesk-logging.conf!')
 log.setup(CONF, 'demo')
