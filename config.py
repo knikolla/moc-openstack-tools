@@ -42,9 +42,9 @@ def set_config_file(cfg_file=None):
 LOG = log.getLogger('root')
 CONF = cfg.CONF
 log_cfg = path.join(path.dirname(path.abspath(__file__)),
-    'helpdesk-logging.conf')
+                    'helpdesk-logging.conf')
 log.register_options(CONF)
-if path.isfile(default_cfg_file):
+if path.isfile(log_cfg):
     CONF(default_config_files=log_cfg)
 else:
     raise IOError('You have to configure logging in '
