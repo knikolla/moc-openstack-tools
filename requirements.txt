@@ -5,5 +5,3 @@ python-neutronclient
 python-cinderclient
 google-api-python-client
 python-dateutil
-oslo.log
-oslo.config

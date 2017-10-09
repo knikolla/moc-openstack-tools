@@ -29,7 +29,7 @@ from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 
-from config import set_config_file, LOG
+from config import set_config_file
 from moc_utils import get_absolute_path, select_rows
 from quotas import QuotaManager
 from message import TemplateMessage
@@ -56,11 +56,9 @@ def parse_rows(rows, select_project=None):
         try:
             rows = select_rows(select_project, PROJECT_COLUMN, rows)
             if len(rows) > 2:
-                LOG.warning(("WARNING: Multiple requests found for project "
-                             "{}. All {} requests will be processed. You "
-                             "may need to close multiple tickets.").format(
-                                 args.project,
-                                 len(rows) - 1))
+                print ("WARNING: Multiple requests found for project {}. All "
+                       "{} requests will be processed. You may need to close "
+                       "multiple tickets.").format(args.project, len(rows) - 1)
         except ValueError as ve:
             raise argparse.ArgumentError(None, ve.message)
     else:
@@ -227,9 +225,8 @@ if __name__ == "__main__":
         
         old_quotas = quota_manager.get_current(ks_project.id)
 
-        LOG.info(("updating the following quotas for project {}:"
-                  "\n\t{}").format(ks_project.name,
-                                   project['quotas'].keys()))
+        print "updating the following quotas for project {}:\n\t{}".format(
+              ks_project.name, project['quotas'].keys())
         
         new_quotas = quota_manager.modify_quotas(ks_project.id,
                                                  **project['quotas'])
@@ -258,8 +255,8 @@ if __name__ == "__main__":
                               **quota_cfg)
         msg.send()
         copy_index.append(project['row'])
-        LOG.info(("Successfully updated quotas for project {}").format(
-            ks_project.name))
+        print "Successfully updated quotas for project {}".format(
+              ks_project.name)
 
     # FIXME: code is duplicated from addusers.py, centralize it
     if copy_index:
@@ -267,8 +264,8 @@ if __name__ == "__main__":
         sheet.append_rows(copy_rows, target="Processed Requests")
         result = sheet.delete_rows(copy_index, 'Form Responses 1')
     elif args.debug:
-        LOG.warning("WARNING: No spreadsheet rows were copied.")
+        print "WARNING: No spreadsheet rows were copied."
     
     if bad_rows and args.debug:
-        LOG.warning(("WARNING: The following rows were not processed: "
-                     "{}").format(bad_rows))
+        print "WARNING: The following rows were not processed: {}".format(
+              bad_rows)
