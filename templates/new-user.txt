@@ -1,6 +1,7 @@
 Hi <FULLNAME>,
 
-A user account has been created for you on MOC Production (Kaizen).  Your username is "<USERNAME>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly.
+A user account has been created for you on MOC Production (Kaizen).  Your username is "<USERNAME>".  You will receive a separate email with a link to set your password. The link will expire after 24 hours, so please act promptly. If your link expires, you may request a new link using the following form:
+<PASSWORD_RESET_FORM_URL>
 
 Once your password is set, you can log in at:
 <LOGIN_URL>
