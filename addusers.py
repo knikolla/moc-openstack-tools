@@ -244,8 +244,8 @@ def parse_rows(rows, select_user=None):
             email = entry[4].replace(u'\xa0', ' ').strip()
             user_info = {'user_name': email,
                          'email': email,
-                         'first_name': entry[5],
-                         'last_name': entry[6]}
+                         'first_name': entry[5].strip(),
+                         'last_name': entry[6].strip()}
 
             if entry[7] == 'No':
                 user_info.update({'is_new': True,
@@ -266,12 +266,12 @@ def parse_rows(rows, select_user=None):
             if entry[15] == "":
                 # the user chose to join an existing project
                 # info in entry[18] to entry[20]
-                project_name = entry[18]
+                project_name = entry[18].strip()
                 if project_name not in projects:
                     project = Project(row=idx,
                                       name=project_name,
-                                      contact_name=entry[19],
-                                      contact_email=entry[20])
+                                      contact_name=entry[19].strip(),
+                                      contact_email=entry[20].strip())
                     projects[project.name] = project
                  
                 projects[project_name].users.append(user)
@@ -291,7 +291,7 @@ def parse_rows(rows, select_user=None):
             else:
                 # a new project was requested - info in entry[15] to entry[17]
                 project = Project(
-                    row=idx, name=entry[15],
+                    row=idx, name=entry[15].strip(),
                     contact_name=user.first_name + " " + user.last_name,
                     contact_email=user.email,
                     description=entry[16],
