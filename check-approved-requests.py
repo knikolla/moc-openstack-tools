@@ -103,7 +103,7 @@ def parse_quota_row(cells):
     # FIXME: this code block is lifted straight from set-quotas.py,
     # farm it out to a function somewhere to streamline updates.  Possibly
     # also update to use a list and for i in range().
-    quotas = {'enddate' : cells[10],
+    quotas = {'enddate': cells[10],
               'instances': cells[11],
               'cores': cells[12],
               'ram': cells[13],
@@ -315,14 +315,15 @@ def send_user_reminder(reminder):
     msg = TemplateMessage(**reminder_cfg)
     msg.send()
 
+
 def send_expired_reminders(reminders, worksheet_key):
-    """Send a reminder email to helpdesk about a quota 
+    """Send a reminder email to helpdesk about a quota
     request which is past the expiration date
     """
     reminder_cfg = dict(config.items('email_defaults'))
     reminder_cfg.update(dict(config.items('expired_reminder')))
     request_details = build_request_details(
-        request_list=reminders, 
+        request_list=reminders,
         template=dict(config.items('reminder'))['detail_template'])
     spreadsheet_link = 'https://docs.google.com/spreadsheets/d/{}'.format(
         worksheet_key)
@@ -333,6 +334,7 @@ def send_expired_reminders(reminders, worksheet_key):
 
     msg = TemplateMessage(**reminder_cfg)
     msg.send()
+
 
 def check_expiration(auth_file, worksheet_key):
     TIMESTAMP_FORMAT = "%d %b %Y %H:%M:%S"
@@ -351,7 +353,7 @@ def check_expiration(auth_file, worksheet_key):
 
     for idx, row in enumerate(rows):
 
-        #skip header row, blank row, or no end date
+        # skip header row, blank row, or no end date
         if (idx == 0) or (row == []) or (row[10] == ''):
             continue
 
@@ -370,20 +372,21 @@ def check_expiration(auth_file, worksheet_key):
             request_info = parse_function(row)
             expired_list.append(request_info)
 
-        #skip rows that are not expired or close to expiring
+        # skip rows that are not expired or close to expiring
         else:
             continue
 
-    #send emails to remind users that their resources are expiring soon
+    # send emails to remind users that their resources are expiring soon
     for reminder in remind_user_list:
         send_user_reminder(reminder=reminder)
 
-    #send email to helpdesk to delete expired resources
+    # send email to helpdesk to delete expired resources
     if expired_list:
         send_expired_reminders(reminders=expired_list,
                                worksheet_key=worksheet_key)
 
-    #do we want to timestamp the spreadsheet?
+    # do we want to timestamp the spreadsheet?
+
 
 if __name__ == '__main__':
 
