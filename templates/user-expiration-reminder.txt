@@ -1,0 +1,8 @@
+Hi <FULLNAME>,
+
+Your quota request on Mass Open Cloud Production (Kaizen) which you requested on <REQUEST_DATE> for the <PROJECT_NAME> project is expiring on <END_DATE>. Make sure to save any critical data from these resources. Please note that after the expiration date, your resources will be shut down without warning.
+
+If you have any questions, please log a ticket at <SUPPORT_URL> and we will be happy to assist you.
+
+Thanks,
+The MOC Team
