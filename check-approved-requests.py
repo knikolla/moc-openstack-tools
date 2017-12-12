@@ -22,6 +22,9 @@ Each run of the script will:
     - Generate an email to the helpdesk in the correct format
     - Update the spreadsheet to indicate the helpdesk was notified
     - (Optional) log the processed requests to the specified log file
+    - Check for quota requests that are almost expired or expired
+    - If expired, generate email to the helpdesk
+    - If almost expired, generate reminder email to the user
 """
 import argparse
 import ConfigParser
@@ -100,7 +103,8 @@ def parse_quota_row(cells):
     # FIXME: this code block is lifted straight from set-quotas.py,
     # farm it out to a function somewhere to streamline updates.  Possibly
     # also update to use a list and for i in range().
-    quotas = {'instances': cells[11],
+    quotas = {'enddate' : cells[10],
+              'instances': cells[11],
               'cores': cells[12],
               'ram': cells[13],
               'floatingip': cells[14],
@@ -291,6 +295,96 @@ def check_requests(request_type, auth_file, worksheet_key):
         timestamp_spreadsheet(sheet, timestamp, reminder_rows, column=2)
 
 
+def send_user_reminder(reminder):
+    """Send a reminder email to user about a quota request
+    which is within warning time of the expiration date
+    """
+    timestamp = reminder[3].split(" ", 1)[0]
+    user_email = reminder[4].replace(u'\xa0', ' ').strip()
+    user_fullname = reminder[5]
+    project_name = reminder[8]
+    end_date = reminder[10]
+
+    reminder_cfg = dict(config.items('email_defaults'))
+    reminder_cfg.update(dict(config.items('expiration_reminder')))
+    reminder_cfg.update({'request_date': timestamp,
+                         'email': user_email,
+                         'fullname': user_fullname,
+                         'project_name': project_name,
+                         'end_date': end_date})
+    msg = TemplateMessage(**reminder_cfg)
+    msg.send()
+
+def send_expired_reminders(reminders, worksheet_key):
+    """Send a reminder email to helpdesk about a quota 
+    request which is past the expiration date
+    """
+    reminder_cfg = dict(config.items('email_defaults'))
+    reminder_cfg.update(dict(config.items('expired_reminder')))
+    request_details = build_request_details(
+        request_list=reminders, 
+        template=dict(config.items('reminder'))['detail_template'])
+    spreadsheet_link = 'https://docs.google.com/spreadsheets/d/{}'.format(
+        worksheet_key)
+    
+    reminder_cfg.update({'request_count': str(len(reminders)),
+                         'request_spreadsheet': spreadsheet_link,
+                         'request_details': request_details})
+
+    msg = TemplateMessage(**reminder_cfg)
+    msg.send()
+
+def check_expiration(auth_file, worksheet_key):
+    TIMESTAMP_FORMAT = "%d %b %Y %H:%M:%S"
+    warn_time = timedelta(hours=int(config.get('expiration_reminder',
+                                               'warn_time')))
+    now = datetime.now()
+    timestamp = now.strftime(TIMESTAMP_FORMAT)
+
+    sheet = Spreadsheet(keyfile=auth_file, sheet_id=worksheet_key)
+    rows = sheet.get_all_rows('Form Responses 1')
+    remind_user_list = []
+    expired_list = []
+
+    parse_function = parse_quota_row
+    csr_type = 'Change Quota'
+
+    for idx, row in enumerate(rows):
+
+        #skip header row, blank row, or no end date
+        if (idx == 0) or (row == []) or (row[10] == ''):
+            continue
+
+        end_date = datetime.strptime(row[10], "%m/%d/%Y")
+
+        # if less than warn_time until expiration
+        # send a reminder email to the user
+        # (should we keep track of if/when we have notified user?)
+        elif ((warn_time + end_date) >= now):
+            request_info = parse_function(row)
+            remind_user_list.append(request_info)
+
+        # if we are past expiry date
+        # send a notification to helpdesk to terminate resources
+        elif ((now - end_date).days > 0):
+            request_info = parse_function(row)
+            expired_list.append(request_info)
+
+        #skip rows that are not expired or close to expiring
+        else:
+            continue
+
+    #send emails to remind users that their resources are expiring soon
+    for reminder in remind_user_list:
+        send_user_reminder(reminder=reminder)
+
+    #send email to helpdesk to delete expired resources
+    if expired_list:
+        send_expired_reminders(reminders=expired_list,
+                               worksheet_key=worksheet_key)
+
+    #do we want to timestamp the spreadsheet?
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
@@ -317,3 +411,4 @@ if __name__ == '__main__':
  
     check_requests('Access', auth_file, worksheet_key)
     check_requests('Quota', quota_auth_file, quota_worksheet_key)
+    check_expiration(quota_auth_file, quota_worksheet_key)
