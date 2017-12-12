@@ -103,8 +103,7 @@ def parse_quota_row(cells):
     # FIXME: this code block is lifted straight from set-quotas.py,
     # farm it out to a function somewhere to streamline updates.  Possibly
     # also update to use a list and for i in range().
-    quotas = {'enddate': cells[10],
-              'instances': cells[11],
+    quotas = {'instances': cells[11],
               'cores': cells[12],
               'ram': cells[13],
               'floatingip': cells[14],
@@ -363,8 +362,7 @@ def check_expiration(auth_file, worksheet_key):
         # send a reminder email to the user
         # (should we keep track of if/when we have notified user?)
         elif ((warn_time + end_date) >= now):
-            request_info = parse_function(row)
-            remind_user_list.append(request_info)
+            remind_user_list.append(row)
 
         # if we are past expiry date
         # send a notification to helpdesk to terminate resources
