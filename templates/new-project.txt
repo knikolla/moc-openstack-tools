@@ -17,7 +17,7 @@ We also suggest you take the following steps to prevent lost data / wasted work:
 More information on getting started with OpenStack can be found here:
 <GETTING_STARTED_URL>
 
-If you have any questions, or if you encounter any issues with your account or project, please send an email to:
+If you have any questions, or if you encounter any issues with your account or project, please log a ticket at:
 <SUPPORT_EMAIL>
 
 Thanks,
