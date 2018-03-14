@@ -34,7 +34,7 @@ Usage:
 """
 import re
 import sys
-import ConfigParser
+from six.moves import configparser
 import argparse
 from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
@@ -94,7 +94,7 @@ class Openstack:
         self.quotas = QuotaManager(session, nova_version)
  
     def create_project(self, project, quotas):
-        print "Creating project: {}".format(project.name)
+        print("Creating project: {}".format(project.name))
         ks_project = self.keystone.projects.create(
             name=project.name, domain='default',
             description=project.description,
@@ -127,7 +127,7 @@ class Openstack:
         
         This function assumes you have already verfied the user doesn't exist.
         """
-        print "Creating user {}".format(user.name)
+        print("Creating user {}".format(user.name))
         password = random_password(16)
         fullname = "{} {}".format(user.first_name, user.last_name)
         ks_user = self.keystone.users.create(name=user.name,
@@ -361,7 +361,7 @@ if __name__ == "__main__":
 
     CONFIG_FILE = set_config_file(args.config)
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
 
     admin_user = config.get('auth', 'admin_user')
@@ -393,7 +393,7 @@ if __name__ == "__main__":
     try:
         content, bad_rows = parse_rows(rows, select_user=args.user)
     except NoApprovedRequests as e:
-        print e.message
+        print(e.message)
         sys.exit(1)
  
     copy_index = []
@@ -461,8 +461,8 @@ if __name__ == "__main__":
             except message.BadEmailRecipient as err:
                 # Warn that not everyone got the email, but don't
                 # otherwise treat this as a failure
-                print err.message
-                print "sendmail reports: \n {0}".format(err.rejected)
+                print(err.message)
+                print("sendmail reports: \n {0}".format(err.rejected))
             except (ItemExistsError,
                     InvalidEmailError, ItemNotFoundError) as e:
                 bad_rows.append((user.row, e.message))
@@ -481,7 +481,7 @@ if __name__ == "__main__":
         sheet.append_rows(copy_rows, target="Current Users")
         result = sheet.delete_rows(copy_index, 'Form Responses 1')
     elif args.debug:
-        print "WARNING: No rows were successfully processed."
+        print("WARNING: No rows were successfully processed.")
    
     if not args.debug:
         # This error should only display in debugging mode
@@ -490,12 +490,12 @@ if __name__ == "__main__":
  
     if bad_rows:
         ERROR_FORMAT = "{row:>16}    {error}"
-        print "The following rows were not fully processed due to errors:"
-        print ERROR_FORMAT.format(row="ROW", error="ERROR")
-        print ERROR_FORMAT.format(row="-----", error="-----")
+        print("The following rows were not fully processed due to errors:")
+        print(ERROR_FORMAT.format(row="ROW", error="ERROR"))
+        print(ERROR_FORMAT.format(row="-----", error="-----"))
         for (row, error_msg) in bad_rows:
             # In the Google Sheets web GUI, row 0 is numbered 1
-            print ERROR_FORMAT.format(row=(row + 1), error=error_msg)
+            print(ERROR_FORMAT.format(row=(row + 1), error=error_msg))
     
     '''
     # TODO: move this code to a 'manual input' function
@@ -512,4 +512,4 @@ if __name__ == "__main__":
                           proj_id, proj_name)
     '''
 
-    print "Done creating accounts."
+    print("Done creating accounts.")

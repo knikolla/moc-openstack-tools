@@ -31,7 +31,7 @@ https://github.com/CCI-MOC/setpass
 import sys
 import re
 import argparse
-import ConfigParser
+from six.moves import configparser
 from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     else:
         CONFIG_FILE = set_config_file()
     
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
     
     admin_user = config.get('auth', 'admin_user')
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     user = [usr for usr in keystone.users.list()
             if usr.name.lower() == args.username.lower()]
     if not user:
-        print "User {} not found".format(args.username)
+        print("User {} not found".format(args.username))
         sys.exit(1)
     else:
         user = user[0]
@@ -117,4 +117,4 @@ if __name__ == "__main__":
         email.dump_to_file(config)
         raise
         
-    print "Password successfully reset for user {}".format(user.name)
+    print("Password successfully reset for user {}".format(user.name))

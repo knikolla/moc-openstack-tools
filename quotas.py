@@ -152,6 +152,6 @@ def _group_quotas(**kwargs):
         else:
             warning = ("\tWARNING: Unrecognized quota"
                        "'{0}={1}'").format(key, kwargs[key])
-            print warning
+            print(warning)
 
     return quotas

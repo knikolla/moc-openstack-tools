@@ -126,7 +126,8 @@ class Spreadsheet(Resource):
                                                    body=body)
         return http_req.execute()
 
-    def _group_index(self, index_list):
+    @staticmethod
+    def _group_index(index_list):
 
         """Process a list of indices into a list of ranges.
         
@@ -136,18 +137,21 @@ class Spreadsheet(Resource):
             self._group_index([1,2,3,12,13,8,6]) returns:
             [ [1,4], [6,7], [8,9], [12,14] ]
         """
-        range_list = []
+        if not index_list:
+            return []
 
         index_list.sort()
 
-        # Find start/end index for each row or sequence of rows in the list
-        for key, group in groupby(enumerate(index_list), lambda (i, x): i - x):
-                grp = map(itemgetter(1), group)
-             
-                # Increment grp[-1] because the end index row is not deleted
-                # so [start, end] = [5, 6] deletes row 5
-                range_list.append([grp[0], grp[-1] + 1])
-        
+        start = None
+        range_list = []
+        for i in index_list:
+            if not start:
+                start = i
+            elif not i == expect:
+                range_list.append([start, expect])
+                start = i
+            expect = i + 1
+        range_list.append([start, expect])
         return range_list
     
     def get_worksheet_id(self, name):
