@@ -3,7 +3,7 @@
 # It echoes back the arguments that are passed.
 import sys
 
-print "Test file successfully called with args:"
+print("Test file successfully called with args:")
 
 for arg in sys.argv[1:]:
-    print arg
+    print(arg)

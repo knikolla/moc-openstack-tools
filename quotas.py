@@ -50,9 +50,9 @@ class QuotaManager:
                 new_quotas['neutron']['port'] = new_port_quota
                 # `TODO: Get the project object passed into this function,
                 # so we can use the name instead of the ID here
-                print ("NOTICE: Auto-adjusted port quota to {} "
-                       "for project {}").format(new_port_quota, project_id)
-        
+                print(
+                    "NOTICE: Auto-adjusted port quota to {} for project {}"
+                ).format(new_port_quota, project_id)
         neutron_quotas = {"quota": new_quotas['neutron']}
         new_neutron = self.neutron.update_quota(project_id,
                                                 body=neutron_quotas)
@@ -152,6 +152,6 @@ def _group_quotas(**kwargs):
         else:
             warning = ("\tWARNING: Unrecognized quota"
                        "'{0}={1}'").format(key, kwargs[key])
-            print warning
+            print(warning)
 
     return quotas

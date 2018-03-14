@@ -34,7 +34,7 @@ Usage:
 """
 import re
 import sys
-import ConfigParser
+from six.moves import configparser
 import argparse
 from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
@@ -94,7 +94,7 @@ class Openstack:
         self.quotas = QuotaManager(session, nova_version)
  
     def create_project(self, project, quotas):
-        print "Creating project: {}".format(project.name)
+        print("Creating project: {}".format(project.name))
         ks_project = self.keystone.projects.create(
             name=project.name, domain='default',
             description=project.description,
@@ -127,7 +127,7 @@ class Openstack:
         
         This function assumes you have already verfied the user doesn't exist.
         """
-        print "Creating user {}".format(user.name)
+        print("Creating user {}".format(user.name))
         password = random_password(16)
         fullname = "{} {}".format(user.first_name, user.last_name)
         ks_user = self.keystone.users.create(name=user.name,
@@ -313,10 +313,10 @@ def parse_rows(rows, select_user=None):
                 except:
                     # If the user typed something in this box but didn't
                     # follow instructions
-                    print ("WARNING: cannot add additional users to "
-                           "project `{}` from input: `{}`").format(
-                               entry[15], entry[17])
-
+                    print(
+                        "WARNING: cannot add additional users to "
+                        "project `{}` from input: `{}`"
+                    ).format(entry[15], entry[17])
                 projects[project.name] = project
         except IndexError:
             # Somehow a required field is blank
@@ -361,7 +361,7 @@ if __name__ == "__main__":
 
     CONFIG_FILE = set_config_file(args.config)
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
 
     admin_user = config.get('auth', 'admin_user')
@@ -393,7 +393,7 @@ if __name__ == "__main__":
     try:
         content, bad_rows = parse_rows(rows, select_user=args.user)
     except NoApprovedRequests as e:
-        print e.message
+        print(e.message)
         sys.exit(1)
  
     copy_index = []
@@ -443,26 +443,26 @@ if __name__ == "__main__":
                         raise ItemNotFoundError('User', user.name)
                     else:
                         # We don't treat this as a critical error
-                        print ("WARNING: Additional user `{}` does not exist "
-                               "in Keystone. The user will not be added to "
-                               "project {}").format(user.name,
-                                                    ks_project.name)
-                
+                        print(
+                            "WARNING: Additional user `{}` does not exist "
+                            "in Keystone. The user will not be added to "
+                            "project {}"
+                        ).format(user.name, ks_project.name)
                 else:
-                    print ("Adding existing user {} to "
-                           "project {}").format(ks_user.name, ks_project.name)
+                    print(
+                        "Adding existing user {} to project {}"
+                    ).format(ks_user.name, ks_project.name)
                     response = openstack.grant_role(auth_url, ks_project.id,
                                                     ks_user.id,
                                                     ks_member_role.id)
-                
                 if user.is_requestor:
                     copy_index.append(user.row)
                 
             except message.BadEmailRecipient as err:
                 # Warn that not everyone got the email, but don't
                 # otherwise treat this as a failure
-                print err.message
-                print "sendmail reports: \n {0}".format(err.rejected)
+                print(err.message)
+                print("sendmail reports: \n {0}".format(err.rejected))
             except (ItemExistsError,
                     InvalidEmailError, ItemNotFoundError) as e:
                 bad_rows.append((user.row, e.message))
@@ -474,14 +474,15 @@ if __name__ == "__main__":
     # Copy and delete only the successful rows
     if copy_index:
         if args.user and (len(copy_index) > 1):
-            print ("WARNING: {} approved requests were processed for user {}. "
-                   "You may need to close multiple tickets.").format(
-                       len(copy_index), args.user)
+            print(
+                "WARNING: {} approved requests were processed for user {}. "
+                "You may need to close multiple tickets."
+            ).format(len(copy_index), args.user)
         copy_rows = [r for r in rows if rows.index(r) in copy_index]
         sheet.append_rows(copy_rows, target="Current Users")
         result = sheet.delete_rows(copy_index, 'Form Responses 1')
     elif args.debug:
-        print "WARNING: No rows were successfully processed."
+        print("WARNING: No rows were successfully processed.")
    
     if not args.debug:
         # This error should only display in debugging mode
@@ -490,12 +491,12 @@ if __name__ == "__main__":
  
     if bad_rows:
         ERROR_FORMAT = "{row:>16}    {error}"
-        print "The following rows were not fully processed due to errors:"
-        print ERROR_FORMAT.format(row="ROW", error="ERROR")
-        print ERROR_FORMAT.format(row="-----", error="-----")
+        print("The following rows were not fully processed due to errors:")
+        print(ERROR_FORMAT.format(row="ROW", error="ERROR"))
+        print(ERROR_FORMAT.format(row="-----", error="-----"))
         for (row, error_msg) in bad_rows:
             # In the Google Sheets web GUI, row 0 is numbered 1
-            print ERROR_FORMAT.format(row=(row + 1), error=error_msg)
+            print(ERROR_FORMAT.format(row=(row + 1), error=error_msg))
     
     '''
     # TODO: move this code to a 'manual input' function
@@ -512,4 +513,4 @@ if __name__ == "__main__":
                           proj_id, proj_name)
     '''
 
-    print "Done creating accounts."
+    print("Done creating accounts.")

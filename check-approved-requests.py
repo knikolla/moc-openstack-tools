@@ -24,7 +24,7 @@ Each run of the script will:
     - (Optional) log the processed requests to the specified log file
 """
 import argparse
-import ConfigParser
+from six.moves import configparser
 import string
 from datetime import datetime, timedelta
 from spreadsheet import Spreadsheet
@@ -304,7 +304,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
    
     CONFIG_FILE = set_config_file(args.config)
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
     # FIXME right now it fails if full path to file is not specified
     # for auth_file, quota_auth_file, or helpdesk_template

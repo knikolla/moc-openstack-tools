@@ -23,7 +23,7 @@ Usage:
     python set-quotas.py
 """
 import argparse
-import ConfigParser
+from six.moves import configparser
 import sys
 from keystoneclient.v3 import client
 from keystoneauth1.identity import v3
@@ -56,9 +56,11 @@ def parse_rows(rows, select_project=None):
         try:
             rows = select_rows(select_project, PROJECT_COLUMN, rows)
             if len(rows) > 2:
-                print ("WARNING: Multiple requests found for project {}. All "
-                       "{} requests will be processed. You may need to close "
-                       "multiple tickets.").format(args.project, len(rows) - 1)
+                print(
+                    "WARNING: Multiple requests found for project {}. All "
+                    "{} requests will be processed. You may need to close "
+                    "multiple tickets."
+                ).format(args.project, len(rows) - 1)
         except ValueError as ve:
             raise argparse.ArgumentError(None, ve.message)
     else:
@@ -176,7 +178,7 @@ if __name__ == "__main__":
         CONFIG_FILE = set_config_file()
 
     # configuration
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
     admin_user = config.get('auth', 'admin_user')
     admin_pwd = config.get('auth', 'admin_pwd')
@@ -206,7 +208,7 @@ if __name__ == "__main__":
     try:
         project_list = parse_rows(rows, select_project=args.project)
     except NoApprovedRequests as e:
-        print e.message
+        print(e.message)
         sys.exit(1)
 
     bad_rows = []
@@ -219,14 +221,14 @@ if __name__ == "__main__":
             ks_project = match_keystone_project(all_ks_projects,
                                                 project['name'])
         except ItemNotFoundError as err:
-            print err.message
+            print(err.message)
             bad_rows.append(project['row'])
             continue
         
         old_quotas = quota_manager.get_current(ks_project.id)
 
-        print "updating the following quotas for project {}:\n\t{}".format(
-              ks_project.name, project['quotas'].keys())
+        print("updating the following quotas for project {}:\n\t{}".format(
+              ks_project.name, project['quotas'].keys()))
         
         new_quotas = quota_manager.modify_quotas(ks_project.id,
                                                  **project['quotas'])
@@ -255,8 +257,8 @@ if __name__ == "__main__":
                               **quota_cfg)
         msg.send()
         copy_index.append(project['row'])
-        print "Successfully updated quotas for project {}".format(
-              ks_project.name)
+        print("Successfully updated quotas for project {}".format(
+              ks_project.name))
 
     # FIXME: code is duplicated from addusers.py, centralize it
     if copy_index:
@@ -264,8 +266,8 @@ if __name__ == "__main__":
         sheet.append_rows(copy_rows, target="Processed Requests")
         result = sheet.delete_rows(copy_index, 'Form Responses 1')
     elif args.debug:
-        print "WARNING: No spreadsheet rows were copied."
+        print("WARNING: No spreadsheet rows were copied.")
     
     if bad_rows and args.debug:
-        print "WARNING: The following rows were not processed: {}".format(
-              bad_rows)
+        print("WARNING: The following rows were not processed: {}".format(
+              bad_rows))

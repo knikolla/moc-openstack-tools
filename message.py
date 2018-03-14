@@ -13,7 +13,6 @@
 #   under the License.
 """Mechanism for composing and sending email messages."""
 import os
-import string
 import smtplib
 from email.mime.text import MIMEText
 from moc_utils import get_absolute_path
@@ -40,10 +39,10 @@ class Message(object):
         template = get_absolute_path(template)
         with open(template, "r") as f:
             msg = f.read()
-        for key in kwargs:
-            if kwargs[key] is not None:
+        for key, value in kwargs.items():
+            if value:
                 placeholder = "<{}>".format(key.upper())
-                msg = string.replace(msg, placeholder, kwargs[key])
+                msg = msg.replace(placeholder, value)
         return msg
 
     def dump_to_file(self, target_path='/tmp', label=None):

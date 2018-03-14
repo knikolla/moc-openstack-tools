@@ -30,7 +30,7 @@ Usage:
                          [-c/--config <CONFIG_FILE>]
 """
 import argparse
-import ConfigParser
+from six.moves import configparser
 from keystoneclient.v3 import client
 from keystoneauth1 import session
 from keystoneauth1.identity import v3
@@ -61,7 +61,7 @@ args = parser.parse_args()
 
 CONFIG_FILE = set_config_file(args.config)
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
 
 admin_user = config.get('auth', 'admin_user')
@@ -111,4 +111,4 @@ for role_assignment in all_info:
     if args.project:
         info = ks.users.get(role_assignment.user['id'])
     role = ks.roles.get(role_assignment.role['id'])
-    print '{:<20}{}'.format(role.name, info.name)
+    print('{:<20}{}'.format(role.name, info.name))

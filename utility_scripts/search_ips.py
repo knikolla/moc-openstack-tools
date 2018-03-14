@@ -22,7 +22,7 @@ Optional flags --router and --floatingip are mutually exclusive, and will
 limit the search range to only that type of IP.
 """
 import argparse
-import ConfigParser
+from six.moves import configparser
 from keystoneclient.v3 import client
 from neutronclient.v2_0 import client as nclient
 from neutronclient.common.exceptions import NotFound as NeutronNotFound
@@ -54,7 +54,7 @@ def floating_ip_search(ip_addr, client):
         found_ip = (ip for ip in client.list_floatingips()['floatingips']
                     if ip['floating_ip_address'] == ip_addr).next()
     except StopIteration:
-        print "{} is not a floating IP".format(ip_addr)
+        print("{} is not a floating IP".format(ip_addr))
         return False
     return found_ip
 
@@ -65,7 +65,7 @@ def router_search(ip_addr, client):
         found_router = (r for r in neutron.list_routers()['routers']
                         if get_router_ip(r) == ip_addr).next()
     except StopIteration:
-        print "{} is not a router IP".format(ip_addr)
+        print("{} is not a router IP".format(ip_addr))
         return False
     return found_router
 
@@ -77,7 +77,7 @@ def print_report(**report_info):
                   "\tid: {project_id}\n\tname: {project_name}\n"
                   "attached to device:\n"
                   "\tid: {device_id}\n\tname: {device_name}")
-    print FORMAT_STR.format(**report_info)
+    print(FORMAT_STR.format(**report_info))
 
 
 # Arguments
@@ -96,7 +96,7 @@ args = parser.parse_args()
 
 CONFIG_FILE = set_config_file(args.config)
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.read(CONFIG_FILE)
 
 admin_user = config.get('auth', 'admin_user')

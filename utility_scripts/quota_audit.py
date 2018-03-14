@@ -25,7 +25,7 @@ Usage:
 import os
 import csv
 import argparse
-import ConfigParser
+from six.moves import configparser
 from keystoneclient.v3 import client
 from keystoneauth1 import session
 from keystoneauth1.identity import v2
@@ -92,7 +92,7 @@ args = parser.parse_args()
 
 if args.config:
     CONFIG_FILE = args.config
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(CONFIG_FILE)
     admin_user = config.get('auth', 'admin_user')
     admin_pwd = config.get('auth', 'admin_pwd')
@@ -147,20 +147,20 @@ for qset in all_neutron_quotas:
             unique_quotas = diff_moc_quotas(actual_quotas)
 
             if len(unique_quotas) > len(isolated_requests):  # partial request
-                print "%s's request doesn't match quotas." % project.name
+                print("%s's request doesn't match quotas." % project.name)
                 no_rec_of_request.append(project.name)
                 continue
 
             if compare_request_with_real(isolated_requests, actual_quotas):
-                print "%s's request matches its quotas." % project.name
+                print("%s's request matches its quotas." % project.name)
             else:
-                print "%s's request doesn't match quotas." % project.name
+                print("%s's request doesn't match quotas." % project.name)
                 no_rec_of_request.append(project.name)
 
         else:
-            print "%s has the default quotas." % project.name
+            print("%s has the default quotas." % project.name)
 
     except NotFound:
         # it seems when projects are deleted their quota sets are not ?
-        print "%s not found" % proj_id
-print "No record of request for increase: %s" % no_rec_of_request
+        print("%s not found" % proj_id)
+print("No record of request for increase: %s" % no_rec_of_request)
